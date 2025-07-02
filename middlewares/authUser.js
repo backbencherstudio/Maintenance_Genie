@@ -1,23 +1,25 @@
-const { verify } = require("jsonwebtoken");
-const dotenv = require("dotenv");
+import { verify } from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 const authUser = async (req, res, next) => {
-const authHeader = req.headers.authorization;
-if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authentication invalid' });
-}
-const token = authHeader.split(' ')[1];
+  const authHeader = req.headers.authorization;
 
-  console.log("Token from cookies:", token);
+  // Check if the authorization header exists and starts with "Bearer"
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Authentication invalid' });
+  }
+
+  const token = authHeader.split(' ')[1];  // Extract the token from "Bearer <token>"
+
+  console.log("Token from header:", token);
   const JWT_SECRET = process.env.WEBTOKEN_SECRET_KEY;
 
   if (!token) {
-    res.status(400).json({
-      message: "Unauthorized user",
+    return res.status(400).json({
+      message: 'Unauthorized user',
     });
-    return;
   }
 
   try {
@@ -26,9 +28,9 @@ const token = authHeader.split(' ')[1];
     console.log("Decoded Token:", decodedToken);
     next();
   } catch (error) {
-    res.status(401).json({ message: "Invalid token" });
+    res.status(401).json({ message: 'Invalid token' });
     return;
   }
 };
 
-module.exports = { authUser };
+export { authUser };

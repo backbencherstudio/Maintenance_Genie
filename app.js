@@ -1,12 +1,15 @@
-const express = require('express');
-const session = require('express-session');
-const dotenv = require('dotenv');
-const { prisma, connectDB } = require('./modules/prisma/prisma');
-const userRoutes = require('./modules/user/user.route');
-const path = require('path');
-
-// Load environment variables from .env file
+import express from 'express';
+import session from 'express-session';
+import dotenv from 'dotenv';
+import { prisma, connectDB } from './modules/prisma/prisma.js';
+import userRoutes from './modules/user/user.route.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';  
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -15,20 +18,15 @@ const PORT = process.env.PORT || 8080;
 connectDB();
 
 // Middlewares
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from the "uploads" folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-app.get('/', (req, res) => {
-  res.send('🚀 Streamly API is running');
-});
-
-// User-related routes (e.g., /register, /login)
-app.use('/api/users', userRoutes); // 👈 cleaner URL like /api/users/register
-
+// User-related routes =
+app.use('/api/users', userRoutes);
 
 // Global 404 fallback
 app.use((req, res) => {
