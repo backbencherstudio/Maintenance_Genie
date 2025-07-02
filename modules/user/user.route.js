@@ -9,8 +9,7 @@ const { verifyUser } = require("../../middlewares/authUser");
 router.get('/test', (req, res) => {
     res.send('✅ User route connected');
   });
-// Register route
+
 router.post("/register", registerUser);
 
-// ✅ Export the router properly!
 module.exports = router;
