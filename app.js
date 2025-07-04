@@ -3,8 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import { fileURLToPath } from 'url';
 import path from "path";
- 
-import userRoutes from "./modules/user/user.route.js"; // Adjust the import path as needed
+import userRoutes from "./modules/user/user.route.js";
 
 const app = express();
 
@@ -22,12 +21,10 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 app.use(morgan("dev"));
-
 app.use('/api/users', userRoutes);
 
-// Get the current module's directory path
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
