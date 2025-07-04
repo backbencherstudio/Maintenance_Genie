@@ -52,26 +52,20 @@ export const registerUserStep1 = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    // Check if user already exists in the 'user' table
+  
     const existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    // Check if OTP already exists for the email in the 'temp' table
+   
     const existingTempUser = await prisma.temp.findUnique({ where: { email } });
 
     if (existingTempUser) {
-      // Check if OTP is expired
       if (new Date() > new Date(existingTempUser.expires_at)) {
-        // OTP is expired, update the OTP
         await prisma.temp.delete({ where: { email } });
-
-        // Generate a new OTP
         const otp = generateOTP();
-
-        // Create new temp record with the OTP
         await prisma.temp.create({
           data: {
             email,
@@ -80,7 +74,6 @@ export const registerUserStep1 = async (req, res) => {
           },
         });
 
-        // Send OTP email
         sendRegistrationOTPEmail(email, otp);
 
         return res.status(200).json({
@@ -94,11 +87,7 @@ export const registerUserStep1 = async (req, res) => {
         shouldResendOtp: false,  // No need to resend if OTP is valid
       });
     }
-
-    // If no OTP exists for the email, create a new one
     const otp = generateOTP();
-
-    // Create new temp record with the OTP
     await prisma.temp.create({
       data: {
         email,
@@ -106,8 +95,6 @@ export const registerUserStep1 = async (req, res) => {
         expires_at: new Date(Date.now() + 15 * 60 * 1000), // OTP expires in 15 minutes
       },
     });
-
-    // Send OTP email
     sendRegistrationOTPEmail(email, otp);
 
     return res.status(200).json({
@@ -118,9 +105,6 @@ export const registerUserStep1 = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
-
 export const verifyOTP = async (req, res) => {
   try {
     const { otp, email } = req.body;
@@ -128,8 +112,6 @@ export const verifyOTP = async (req, res) => {
     if (!otp || !email) {
       return res.status(400).json({ message: "OTP and email are required" });
     }
-
-    // Check if the user exists in the 'temp' table for this email
     const notVerifiedUser = await prisma.temp.findUnique({
       where: { email },
     });
@@ -138,7 +120,6 @@ export const verifyOTP = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // Check if OTP is expired
     if (new Date() > new Date(notVerifiedUser.expires_at)) {
       return res.status(400).json({
         success: false,
@@ -147,8 +128,6 @@ export const verifyOTP = async (req, res) => {
         ucodeId: notVerifiedUser.id,
       });
     }
-
-    // Check if OTP is correct
     if (notVerifiedUser.otp !== otp) {
       return res.status(400).json({
         success: false,
@@ -156,19 +135,15 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // Now that OTP is valid, let's verify the user (we don't store OTP in user)
     const verifiedUser = await prisma.user.create({
       data: {
         email: notVerifiedUser.email,
       },
     });
 
-    // Delete the temporary user entry from 'temp' table
     await prisma.temp.delete({
       where: { id: notVerifiedUser.id },
     });
-
-    // Create JWT Token for verified user
     const jwtToken = jwt.sign(
       {
         userId: verifiedUser.id,
@@ -193,15 +168,23 @@ export const verifyOTP = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
-
-
-
 export const registerUserStep3 = async (req, res) => {
   try {
     const { name, password } = req.body;
-    const email = req.cookies.email;
+    const token = req.headers['authorization']?.split(' ')[1];
+
+    if (!token) {
+      return res.status(400).json({ message: "Authentication token is required" });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.WEBTOKEN_SECRET_KEY); 
+    } catch (error) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    const email = decoded.email; 
 
     if (!name || !password) {
       return res.status(400).json({ message: "Name and password are required" });
@@ -211,31 +194,35 @@ export const registerUserStep3 = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
-    // Hash the password before saving it
     const hashedPassword = await hashPassword(password);
 
-    // Save user to the database
-    const newUser = await prisma.user.create({
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!existingUser) {
+      return res.status(400).json({ message: "Email is not registered" });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { email },  
       data: {
         name,
-        email,
-        password: hashedPassword, // Save the hashed password
+        email, 
+        password: hashedPassword, 
       },
     });
 
-    // Clear cookies after registration
-    res.clearCookie("otp");
-    res.clearCookie("email");
-
     return res.status(200).json({
       message: "Registration successful",
-      user: { id: newUser.id, name: newUser.name, email: newUser.email },
+      user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email },
     });
   } catch (error) {
     console.error("Error in registerUserStep3:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 
 
