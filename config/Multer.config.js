@@ -4,7 +4,6 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { fileURLToPath } from 'url';
 
-// Get the current module's directory path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,5 +26,4 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Export the upload middleware
 export default upload;

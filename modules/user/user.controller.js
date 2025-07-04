@@ -223,11 +223,7 @@ export const registerUserStep3 = async (req, res) => {
   }
 };
 
-
-
-
-
-// Authenticate user during login
+//Login
 export const authenticateUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -264,6 +260,17 @@ export const authenticateUser = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
+
+
+
+
+
 // Forgot password OTP send
 export const forgotPasswordOTPsend = async (req, res) => {
   try {
@@ -293,7 +300,6 @@ export const forgotPasswordOTPsend = async (req, res) => {
     return res.status(500).json(error);
   }
 };
-
 // Match forgot password OTP
 export const matchForgotPasswordOTP = async (req, res) => {
   try {
@@ -312,7 +318,6 @@ export const matchForgotPasswordOTP = async (req, res) => {
     return res.status(500).json(error);
   }
 };
-
 // Reset password
 export const resetPassword = async (req, res) => {
   try {
@@ -346,7 +351,6 @@ export const resetPassword = async (req, res) => {
     return res.status(500).json(error);
   }
 };
-
 // Logout user
 export const logout = (req, res) => {
   try {
@@ -356,7 +360,6 @@ export const logout = (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
-
 // Check if user is authenticated
 export const checkAuthStatus = async (req, res) => {
   try {
