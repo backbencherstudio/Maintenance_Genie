@@ -1,41 +1,50 @@
-const express = require('express');
-const session = require('express-session');
-const dotenv = require('dotenv');
-const { prisma, connectDB } = require('./modules/prisma/prisma');
-const userRoutes = require('./modules/user/user.route');
-const path = require('path');
-
-// Load environment variables from .env file
-dotenv.config();
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+import { fileURLToPath } from 'url';
+import path from "path";
+import userRoutes from "./modules/user/user.route.js";
 
 const app = express();
-const PORT = process.env.PORT || 8080;
 
-// Connect to the database
-connectDB();
+app.use(
+  cors({
+    origin: [
+      "http://192.168.30.102:3000",
+      "http://192.168.30.102:*",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ]
+  })
+);
 
-// Middlewares
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan("dev"));
+app.use('/api/users', userRoutes);
 
-// Serve static files from the "uploads" folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
-app.get('/', (req, res) => {
-  res.send('🚀 Streamly API is running');
+app.use((req, res, next) => {
+  res.status(404).json({
+    message: `404 route not found`,
+  });
 });
 
-// User-related routes (e.g., /register, /login)
-app.use('/api/users', userRoutes); // 👈 cleaner URL like /api/users/register
-
-
-// Global 404 fallback
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+app.use((err, req, res, next) => {
+  res.status(500).json({
+    message: `500 Something broken!`,
+    error: err.message,
+  });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+
+app.use(express.static(path.join(__dirname, "public")));
+
+export default app;
+
