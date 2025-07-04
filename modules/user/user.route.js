@@ -1,6 +1,7 @@
 import express from 'express';
 import { registerUserStep1, verifyOTP, registerUserStep3 } from './user.controller.js'; // Adjust imports
-import { upload } from '../../middlewares/Multer.config.js'; // File upload middleware
+import  upload  from '../../config/Multer.config.js'; // File upload middleware
+ 
 
 const router = express.Router();
 
@@ -22,6 +23,8 @@ router.post('/register-step1', registerUserStep1);
 
 // Step 2: User verifies OTP
 router.post('/verify-otp', verifyOTP);
+
+// router.patch('/uodateuser', varyfyUser('USER'), updateUser)
 
 // Step 3: User sets name and password after OTP verification
 router.post('/register-step3', registerUserStep3);

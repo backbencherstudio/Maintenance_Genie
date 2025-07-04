@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -24,6 +23,17 @@ enum Role {
   normal
   premium
   admin
+}
+
+model Temp{
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  email      String   @unique
+  otp        String   @unique
+  expires_at DateTime
+  is_verified Int?    @default(0) // 0 for not verified, 1 for verified
+
+  @@map("temp")
 }
 
 model User {
@@ -45,5 +55,7 @@ model User {
   bio    String?
   is_two_factor_enabled Int?    @default(0)
   two_factor_secret     String? // secret key for two factor authentication
+
+  @@map("users")
 
 }

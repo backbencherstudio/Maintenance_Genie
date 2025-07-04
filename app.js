@@ -1,39 +1,53 @@
-import express from 'express';
-import session from 'express-session';
-import dotenv from 'dotenv';
-import { prisma, connectDB } from './modules/prisma/prisma.js';
-import userRoutes from './modules/user/user.route.js';
-import path from 'path';
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
 import { fileURLToPath } from 'url';
-import cookieParser from 'cookie-parser';  
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import path from "path";
+ 
+import userRoutes from "./modules/user/user.route.js"; // Adjust the import path as needed
 
 const app = express();
-const PORT = process.env.PORT || 8080;
 
-// Connect to the database
-connectDB();
+app.use(
+  cors({
+    origin: [
+      "http://192.168.30.102:3000",
+      "http://192.168.30.102:*",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ]
+  })
+);
 
-// Middlewares
-app.use(cookieParser());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the "uploads" folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(morgan("dev"));
 
-// User-related routes =
 app.use('/api/users', userRoutes);
 
-// Global 404 fallback
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+// Get the current module's directory path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
+app.use((req, res, next) => {
+  res.status(404).json({
+    message: `404 route not found`,
+  });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+app.use((err, req, res, next) => {
+  res.status(500).json({
+    message: `500 Something broken!`,
+    error: err.message,
+  });
 });
+
+
+app.use(express.static(path.join(__dirname, "public")));
+
+export default app;
+
