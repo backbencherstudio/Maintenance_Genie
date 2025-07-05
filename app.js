@@ -4,6 +4,7 @@ import morgan from "morgan";
 import { fileURLToPath } from 'url';
 import path from "path";
 import userRoutes from "./modules/user/user.route.js";
+import adminRoutes from "./modules/admin/admin.route.js";
 
 const app = express();
 
@@ -23,6 +24,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes)
+app.get("/", (req, res) => {
+  res.send("Welcome to Maintenance Genie API");
+});
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +50,11 @@ app.use((err, req, res, next) => {
 
 
 app.use(express.static(path.join(__dirname, "public")));
+
+
+
+
+
 
 export default app;
 

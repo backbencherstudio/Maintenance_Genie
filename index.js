@@ -5,6 +5,7 @@ const PORT = process.env.PORT || 8080;
 
 const prisma = new PrismaClient();
 
+
 app.listen(PORT, async () => {
   try {
     console.log(`Server running on http://localhost:${PORT}`);

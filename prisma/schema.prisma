@@ -17,13 +17,9 @@ enum Status {
   active
   inactive
   expired
+  suspended
 }
 
-enum Role {
-  normal
-  premium
-  admin
-}
 
 model Temp{
   id         String   @id @default(cuid())
@@ -36,6 +32,15 @@ model Temp{
   @@map("temp")
 }
 
+enum Role {
+  normal
+  premium
+  admin
+}
+enum Type {
+ USER
+ ADMIN
+}
 model User {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
@@ -44,12 +49,15 @@ model User {
   password  String?
   customer_id String?
   country String?
+  address String?
   gender String?
   status  Status @default(active)
   role    Role  @default(normal)
+  type    Type@default(USER)
   date_of_birth DateTime? @db.Date
   city  String?
   phone_number String?
+  avatar   String?
   state  String?
   postal_code String?
   bio    String?
@@ -58,4 +66,22 @@ model User {
 
   @@map("users")
 
+  Subscription Subscription[]
+}
+
+enum Plan {
+  HalfYearly
+  Yearly
+}
+model Subscription {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  user_id    String
+  plan       Plan
+  start_date DateTime
+  end_date   DateTime
+  status     Status   @default(active)
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@map("subscriptions")
 }
