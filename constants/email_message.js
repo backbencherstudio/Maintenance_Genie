@@ -267,3 +267,149 @@ export const emailRegisterUserOTP = (email, OTP) => {
   `;
 };
 
+export const sendAdminInvitationEmails = (email, password) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Admin Invitation</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Arial', 'Helvetica', sans-serif;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px; margin: auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 40px; margin-bottom: 40px;">
+        <tr>
+          <td style="padding: 0;">
+            <!-- Header -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background-color: #2c3e50; padding: 30px 40px;">
+                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Maintenance Genie Admin Portal</h1>
+                </td>
+              </tr>
+            </table>
+  
+            <!-- Document Title -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 40px 40px 20px;">
+                  <h2 style="color: #2c3e50; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 20px; font-weight: 600; margin: 0; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px;">ADMIN ACCOUNT INVITATION</h2>
+                </td>
+              </tr>
+            </table>
+  
+            <!-- Introduction -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 30px;">
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
+                    Dear Administrator,
+                  </p>
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
+                    You have been invited to join the Maintenance Genie Admin Portal. Below are your temporary login credentials:
+                  </p>
+                </td>
+              </tr>
+            </table>
+            
+            <!-- Credentials Box -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 30px;">
+                  <div style="background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 4px; padding: 20px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td width="120" style="padding: 5px 0;">
+                          <strong style="color: #2c3e50;">Email:</strong>
+                        </td>
+                        <td style="padding: 5px 0; font-family: monospace;">
+                          ${email}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="120" style="padding: 5px 0;">
+                          <strong style="color: #2c3e50;">Password:</strong>
+                        </td>
+                        <td style="padding: 5px 0; font-family: monospace;">
+                          ${password}
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+            </table>
+  
+            <!-- Security Notice -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 30px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #fff9e6; border-left: 4px solid #f1c40f; padding: 15px;">
+                    <tr>
+                      <td style="padding: 10px 15px;">
+                        <p style="color: #7d6608; font-size: 14px; line-height: 21px; margin: 0; font-weight: 500;">
+                          <strong>SECURITY NOTE:</strong> For security reasons, please change your password immediately after logging in for the first time. Do not share these credentials with anyone.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+  
+            <!-- Instructions -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 30px;">
+                  <h3 style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0 0 15px; text-transform: uppercase;">Getting Started</h3>
+                  <ol style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px; padding-left: 20px;">
+                    <li style="margin-bottom: 10px;">Visit the <a href="#" style="color: #3498db; text-decoration: none;">Admin Portal Login Page</a></li>
+                    <li style="margin-bottom: 10px;">Log in using the credentials provided above</li>
+                    <li style="margin-bottom: 10px;">Navigate to your profile settings to change your password</li>
+                    <li>Review the admin dashboard and available features</li>
+                  </ol>
+                </td>
+              </tr>
+            </table>
+  
+            <!-- Closing -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 40px;">
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 15px;">
+                    If you did not request this invitation or need any assistance, please contact our security team immediately.
+                  </p>
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
+                    Regards,
+                  </p>
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
+                    <strong>Maintenance Genie Admin Team</strong>
+                  </p>
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
+                    Maintenance Genie Corporation
+                  </p>
+                </td>
+              </tr>
+            </table>
+  
+            <!-- Footer -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background-color: #f5f5f5; padding: 20px 40px; text-align: center; border-top: 1px solid #e0e0e0;">
+                  <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0 0 10px;">
+                    This invitation was sent to ${email}
+                  </p>
+                  <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0;">
+                    This is a confidential system-generated email. Please do not forward or share its contents.<br>
+                    © 2024 Maintenance Genie Corporation. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+};

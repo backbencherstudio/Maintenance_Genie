@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import { emailForgotPasswordOTP, emailRegisterUserOTP } from "../constants/email_message.js"; 
+import { emailForgotPasswordOTP, emailRegisterUserOTP,sendAdminInvitationEmails } from "../constants/email_message.js"; 
 
 dotenv.config();  
 
@@ -58,12 +58,6 @@ export const sendForgotPasswordOTP = async (email, otp) => {
 };
 
 export const sendAdminInvitationEmail = async (email, password) => {
-  const htmlContent = `<p>Dear,</p>
-  <p>You have been invited to join the admin team.</p>
-  <p>Please click the link below to accept the invitation:</p>
-  <p><a href="http://localhost:8080/accept-invitation?email=${email}">Accept Invitation</a></p>
-  p<p>Your temporary password is: <strong>${password}</strong></p>
-  <p>Please change your password after logging in.</p>
-  <p>Thank you!</p>`;
+  const htmlContent = sendAdminInvitationEmails(email, password);
   await sendEmail(email, "Admin Invitation", htmlContent);
 };
