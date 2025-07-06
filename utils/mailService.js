@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import { emailForgotPasswordOTP, emailRegisterUserOTP } from "../constants/email_message.js"; 
+import { emailForgotPasswordOTP, emailRegisterUserOTP,sendAdminInvitationEmails } from "../constants/email_message.js"; 
 
 dotenv.config();  
 
@@ -55,4 +55,9 @@ export const sendRegistrationOTPEmail = async (email, otp) => {
 export const sendForgotPasswordOTP = async (email, otp) => {
   const htmlContent = emailForgotPasswordOTP(email, otp);
   await sendEmail(email, "OTP Code for Password Reset", htmlContent);
+};
+
+export const sendAdminInvitationEmail = async (email, password) => {
+  const htmlContent = sendAdminInvitationEmails(email, password);
+  await sendEmail(email, "Admin Invitation", htmlContent);
 };
