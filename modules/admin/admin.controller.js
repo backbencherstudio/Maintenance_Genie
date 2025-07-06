@@ -328,7 +328,7 @@ export const inviteAdmin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Invitation sent successfully. Please verify the OTP to complete registration.",
+      message: "Invitation sent successfully.",
       addAdmin
     });
   } catch (error) {
