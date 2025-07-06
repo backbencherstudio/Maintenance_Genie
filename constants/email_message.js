@@ -131,8 +131,6 @@ export const emailForgotPasswordOTP = (email, OTP) => {
     </html>
   `;
 };
-
-  
 export const emailRegisterUserOTP = (email, OTP) => {
   return `
     <!DOCTYPE html>
@@ -266,7 +264,6 @@ export const emailRegisterUserOTP = (email, OTP) => {
     </html>
   `;
 };
-
 export const sendAdminInvitationEmails = (email, password) => {
   return `
     <!DOCTYPE html>

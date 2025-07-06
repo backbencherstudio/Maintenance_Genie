@@ -35,7 +35,6 @@ model Temp{
 enum Role {
   normal
   premium
-  admin
 }
 enum Type {
  USER
@@ -61,12 +60,21 @@ model User {
   state  String?
   postal_code String?
   bio    String?
+  billing_id        String?
+  banking_id        String?
+  is_subscribed Int? @default(0)
   is_two_factor_enabled Int?    @default(0)
   two_factor_secret     String? // secret key for two factor authentication
-
   @@map("users")
 
   Subscription Subscription[]
+  Item Item[]
+  Tasks Tasks[]
+
+  Notification_sender Notification[] @relation("sender")
+  Notification_receiver Notification[] @relation("receiver")
+  UserPaymentMethod UserPaymentMethod[]
+  PaymentTransaction PaymentTransaction[]
 }
 
 enum Plan {
@@ -84,4 +92,156 @@ model Subscription {
   user       User     @relation(fields: [user_id], references: [id])
 
   @@map("subscriptions")
+
+
+  PaymentTransaction PaymentTransaction[]
 }
+
+model UserPaymentMethod {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  user_id String?
+  user    User?   @relation(fields: [user_id], references: [id])
+
+  payment_method_id String?
+  checkout_id       String?
+
+  @@map("user_payment_methods")
+}
+
+model PaymentTransaction {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+  status     String?   @default("pending")
+
+  user_id String?
+  user    User?   @relation(fields: [user_id], references: [id])
+
+  subscription_id String?
+
+  type         String? @default("order")
+  withdraw_via String? @default("wallet")
+
+  provider String? // stripe, paypal, etc.
+
+  reference_number String?
+  raw_status       String?
+  amount           Decimal?
+  currency         String?
+  paid_amount      Decimal?
+  paid_currency    String?
+  Subscription     Subscription[]
+
+  @@map("payment_transactions")
+}
+
+model NotificationEvent {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  status Int?    @default(1) @db.SmallInt
+  type   String?
+  text   String?
+
+  notifications Notification[]
+
+  @@map("notification_events")
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  status Int? @default(1) @db.SmallInt
+
+  sender_id String?
+  sender    User?   @relation("sender", fields: [sender_id], references: [id])
+
+  receiver_id String?
+  receiver    User?   @relation("receiver", fields: [receiver_id], references: [id])
+
+  notification_event_id String?
+  notification_event    NotificationEvent? @relation(fields: [notification_event_id], references: [id])
+
+  entity_id String?
+  read_at   DateTime?
+
+  @@map("notifications")
+}
+
+
+enum Category {
+  Vehicle
+  Appliance
+  Electronics
+  Custom
+}
+
+model Item{
+  id        String   @id @default(cuid())
+  created_at DateTime @default(now())
+
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+ 
+
+  task_id    String?
+  is_subscribed Int? @default(0) 
+  name       String
+  description String?
+  brand      String?
+  model      String?
+  vin        String?
+  purchase_date DateTime?
+  total_mileage Float?
+  last_service_date DateTime?
+  last_service_name String?
+  image_url String?
+  price      Float
+  image      String?
+  category   Category? @default(Custom)
+  service_intervals  String[]
+  forum_suggestions String[] // if subscription is active, this will be used to suggest forums related to the item
+  @@map("items")
+
+  Tasks Tasks[]
+
+}
+
+enum Task_Status {
+  Due 
+  Completed
+  Overdue
+}
+model Tasks {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+
+  item_id    String @unique
+  item       Item     @relation(fields: [item_id], references: [id])
+
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+
+  is_subscribed Int? @default(0)
+  upcoming_task String?
+  item_name String
+  description String?
+  item_last_service_date DateTime?
+  receipt_url String?
+  status     Task_Status @default(Due)
+  last_date DateTime?
+  maintenance_history String[] // if subscription is active, this will be used to store the maintenance history of the item
+  shop_suggestions String[] // if subscription is active, this will be used to suggest shops related to the item
+  @@map("tasks")
+}
+
