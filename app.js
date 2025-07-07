@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import path from "path";
 import userRoutes from "./modules/user/user.route.js";
 import adminRoutes from "./modules/admin/admin.route.js";
+import addItemRoutes from "./modules/add_items/add_items.route.js";
 
 const app = express();
 
@@ -24,7 +25,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes)
+app.use('/api/admin', adminRoutes);
+app.use('/api/items', addItemRoutes);
 app.get("/", (req, res) => {
   res.send("Welcome to Maintenance Genie API");
 });

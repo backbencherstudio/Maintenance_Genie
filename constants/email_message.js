@@ -410,3 +410,104 @@ export const sendAdminInvitationEmails = (email, password) => {
     </html>
   `;
 };
+export const receiveEmailTemplate = (email, subject, message) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Hello ADMIN, a new customer issue has been reported</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Arial', 'Helvetica', sans-serif;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px; margin: auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 40px; margin-bottom: 40px;">
+        <tr>
+          <td style="padding: 0;">
+            <!-- Header -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background-color:rgb(173, 40, 40); padding: 30px 40px;">
+                  <h1 style="color: #ffffff; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 24px; font-weight: 600; margin: 0; letter-spacing: 0.3px;">Hello ADMIN, <br> A new customer issue has been reported</h1>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Document Title -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 40px 40px 20px;">
+                  <h2 style="color: #2c3e50; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 20px; font-weight: 600; margin: 0; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px;">MESSAGE DETAILS</h2>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Message Content -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 30px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                    <tr>
+                      <td style="padding-bottom: 15px;">
+                        <strong style="color: #2c3e50; display: inline-block; width: 80px;">From:</strong>
+                        <span style="color: #2c3e50;">${email}</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding-bottom: 15px;">
+                        <strong style="color: #2c3e50; display: inline-block; width: 80px;">Subject:</strong>
+                        <span style="color: #2c3e50;">${subject || 'No subject provided'}</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding-top: 20px;">
+                        <div style="background-color: #f5f5f5; border-left: 4px solid #3498db; padding: 15px; border-radius: 4px;">
+                          <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0; white-space: pre-line;">${message}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Action Button -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 30px; text-align: center;">
+                  <a href="mailto:${email}" style="background-color: #3498db; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 4px; font-weight: 600; display: inline-block; font-size: 14px;">Reply to Sender</a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Closing -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 0 40px 40px;">
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0 0 5px;">
+                    Regards,
+                  </p>
+                  <p style="color: #2c3e50; font-size: 15px; line-height: 24px; margin: 0;">
+                    <strong>Maintenance Genie Support</strong>
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Footer -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="background-color: #f5f5f5; padding: 20px 40px; text-align: center; border-top: 1px solid #e0e0e0;">
+                  <p style="color: #7f8c8d; font-size: 13px; line-height: 20px; margin: 0;">
+                    This message was sent via your website contact form.<br>
+                    © ${new Date().getFullYear()} Maintenance Genie Corporation. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+};

@@ -90,6 +90,8 @@ export const changeAdminPassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const userId = req.user.userId;
+    console.log('User ID:', userId);
+    
 
     if (!oldPassword || !newPassword) {
       res.status(400).json({
@@ -441,6 +443,64 @@ export const activateUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error activating user:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+//get all mails 
+export const getAllMails = async (req, res) => {
+  try {
+    const mails = await prisma.mail.findMany({
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    if (mails.length === 0) {
+      return res.status(404).json({ message: "No mails found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Mails retrieved successfully",
+      data: mails,
+    });
+  } catch (error) {
+    console.error('Error retrieving mails:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+//change mail status
+export const changeMailStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Mail ID is required" });
+    }
+
+    const mail = await prisma.mail.findUnique({
+      where: { id },
+    });
+
+    if (!mail) {
+      return res.status(404).json({ message: "Mail not found" });
+    }
+
+    const newStatus = mail.status === 'Pending' ? 'Solved' : 'Pending';
+
+    const updatedMail = await prisma.mail.update({
+      where: { id },
+      data: { status: newStatus },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Mail status updated to ${newStatus} successfully`,
+      data: updatedMail,
+    });
+  } catch (error) {
+    console.error('Error updating mail status:', error);
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };

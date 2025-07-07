@@ -2,7 +2,7 @@ import express from 'express';
 
 import { upload } from '../../config/Multer.config.js';
 import { verifyUser } from '../../middlewares/verifyUsers.js';
-import { changeAdminPassword, getAllAdmins, loginAdmin, updateAdminDetails, updateImage,deleteAdmin ,inviteAdmin,getAllUsers,getTotalUsers,suspendUser,activateUser} from './admin.controller.js';
+import { changeAdminPassword, getAllAdmins, loginAdmin, updateAdminDetails, updateImage,deleteAdmin ,inviteAdmin,getAllUsers,getTotalUsers,suspendUser,activateUser , getAllMails, changeMailStatus} from './admin.controller.js';
 
 const router = express.Router();
 
@@ -30,5 +30,9 @@ router.put('/suspend-user/:id', verifyUser("ADMIN"), suspendUser);
 router.put('/active-user/:id', verifyUser("ADMIN"), activateUser);
 
 
+//get all mails 
+router.get('/get-all-mails', verifyUser("ADMIN"), getAllMails);
+//change mail status 
+router.post('/change-mail-status/:id', verifyUser("ADMIN"), changeMailStatus);
 
 export default router;

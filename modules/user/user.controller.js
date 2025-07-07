@@ -5,7 +5,7 @@ import  {upload}  from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { PrismaClient } from "@prisma/client";
-import { generateOTP, sendForgotPasswordOTP, sendRegistrationOTPEmail } from "../../utils/mailService.js";
+import { generateOTP, receiveEmails, sendForgotPasswordOTP, sendRegistrationOTPEmail } from "../../utils/mailService.js";
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -567,7 +567,106 @@ export const updateUserDetails = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+//change password
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.userId; 
+
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new passwords are required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId , type: 'USER' },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedNewPassword = await hashPassword(newPassword);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+      },
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+//send mail to admin
+export const sendMailToAdmin = async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+
+    const user_email = req.user?.email;
+    const userId = req.user?.userId;
+
+    if (!user_email || !userId) {
+      return res.status(400).json({ message: "User email or ID is missing" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: user_email, id: userId, type: 'USER' },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if ( !subject || !message) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (!isEmail(user_email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const token = Math.floor(10000000 + Math.random() * 90000000).toString(); // Generate a random 8-digit token
+
+    const mail = await prisma.mail.create({
+      data: {
+        user_id: userId,
+        user_email,
+        user_name: user.name,
+        subject,
+        message,
+        token: token,
+      },
+    });
 
 
 
+    receiveEmails(user_email, subject, message);
 
+    return res.status(200).json({
+      success: true,
+      message: "Mail sent to admin successfully",
+      data: mail,
+    });
+  } catch (error) {
+    console.error('Error sending mail to admin:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
