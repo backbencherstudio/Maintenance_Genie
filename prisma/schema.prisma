@@ -75,6 +75,7 @@ model User {
   Notification_receiver Notification[] @relation("receiver")
   UserPaymentMethod UserPaymentMethod[]
   PaymentTransaction PaymentTransaction[]
+  Mail Mail[]
 }
 
 enum Plan {
@@ -243,5 +244,25 @@ model Tasks {
   maintenance_history String[] // if subscription is active, this will be used to store the maintenance history of the item
   shop_suggestions String[] // if subscription is active, this will be used to suggest shops related to the item
   @@map("tasks")
+}
+enum Mail_Status {
+  Solved
+  Pending
+}
+model Mail{
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+  user_id String?
+  user    User?   @relation(fields: [user_id], references: [id])
+  user_email String? 
+  user_name  String?
+  subject    String?
+  message    String?
+  token      String? @unique
+  status     Mail_Status @default(Pending)
+
+  @@map("mails")
 }
 
