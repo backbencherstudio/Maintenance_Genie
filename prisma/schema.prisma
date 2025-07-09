@@ -81,16 +81,24 @@ model User {
 enum Plan {
   HalfYearly
   Yearly
+  Free
 }
 model Subscription {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
+
+  service_id String?
+  service Services? @relation(fields: [service_id], references: [id])
+   
+  price      Float?
   user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  
   plan       Plan
   start_date DateTime
   end_date   DateTime
-  status     Status   @default(active)
-  user       User     @relation(fields: [user_id], references: [id])
+  status     Role   @default(premium)
+
 
   @@map("subscriptions")
 
@@ -124,19 +132,14 @@ model PaymentTransaction {
   user    User?   @relation(fields: [user_id], references: [id])
 
   subscription_id String?
+  subscription    Subscription? @relation(fields: [subscription_id], references: [id])
 
-  type         String? @default("order")
-  withdraw_via String? @default("wallet")
-
-  provider String? // stripe, paypal, etc.
-
-  reference_number String?
-  raw_status       String?
-  amount           Decimal?
+  provider String? 
+  price           Decimal? 
   currency         String?
   paid_amount      Decimal?
   paid_currency    String?
-  Subscription     Subscription[]
+  payment_method  String?
 
   @@map("payment_transactions")
 }
@@ -196,7 +199,6 @@ model Item{
  
 
   task_id    String?
-  is_subscribed Int? @default(0) 
   name       String
   description String?
   brand      String?
@@ -207,7 +209,7 @@ model Item{
   last_service_date DateTime?
   last_service_name String?
   image_url String?
-  price      Float
+  price      String? // price of the item, can be null if not applicable
   image      String?
   category   Category? @default(Custom)
   service_intervals  String[]
@@ -233,7 +235,6 @@ model Tasks {
   user_id    String
   user       User     @relation(fields: [user_id], references: [id])
 
-  is_subscribed Int? @default(0)
   upcoming_task String?
   item_name String
   description String?
@@ -266,3 +267,15 @@ model Mail{
   @@map("mails")
 }
 
+
+model Services{
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  name       String
+  description String?
+  price      Float
+  features   String[]
+  plan       Plan 
+  @@map("services")
+  Subscription Subscription[]
+}

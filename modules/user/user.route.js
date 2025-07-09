@@ -1,6 +1,7 @@
 import express from 'express';
 
-import { registerUserStep1,
+import { 
+   registerUserStep1,
    verifyOTP, 
    registerUserStep3, 
    loginUser, 
@@ -8,10 +9,11 @@ import { registerUserStep1,
    resetPassword, 
    verifyForgotPasswordOTP,
    updateImage, 
-   authenticateUser,
    updateUserDetails,
-  changePassword,
-  sendMailToAdmin} from './user.controller.js'; 
+   changePassword,
+   sendMailToAdmin,
+   getMe
+} from './user.controller.js'; 
 
 
 import { upload } from '../../config/Multer.config.js';
@@ -53,5 +55,8 @@ router.put('/update-user-details', verifyUser("USER"), updateUserDetails);
 
 //support
 router.post('/sende-mail', verifyUser("USER"), sendMailToAdmin )
+
+//get me 
+router.get('/get-me', verifyUser("USER"), getMe);
 
 export default router;

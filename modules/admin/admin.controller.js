@@ -469,7 +469,6 @@ export const getAllMails = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
-
 //change mail status
 export const changeMailStatus = async (req, res) => {
   try {
@@ -504,4 +503,90 @@ export const changeMailStatus = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+export const createService = async (req, res) => {
+  try {
+    const { name, description, price, features, plan } = req.body;
 
+    if (!name || !description || !price || !features || !plan) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const newService = await prisma.services.create({
+      data: {
+        name,
+        description,
+        price: parseFloat(price),
+        features: JSON.parse(features), 
+        plan,
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Service created successfully",
+      data: newService,
+    });
+  } catch (error) {
+    console.error('Error creating service:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+}
+//get all services
+export const getAllServices = async (req, res) => {
+  try {
+    const services = await prisma.services.findMany({
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    if (services.length === 0) {
+      return res.status(404).json({ message: "No services found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Services retrieved successfully",
+      data: services,
+    });
+  } catch (error) {
+    console.error('Error retrieving services:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+}
+//get me
+export const getMe = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        created_at: true,
+        type: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User retrieved successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error('Error retrieving user:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};

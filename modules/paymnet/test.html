@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stripe One-time Payment</title>
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <h1>Stripe One-time Payment</h1>
+
+  <!-- Payment Form for One-time Payment -->
+  <div id="payment-form">
+    <h2>Make a Payment</h2>
+    <div id="card-element"></div>
+    <button id="pay-submit">Pay $20</button>
+    <div id="payment-error" style="color: red; display: none;"></div>
+    <div id="payment-loading" style="display: none;">Processing payment...</div>
+  </div>
+
+  <script>
+    // Initialize Stripe and Elements
+    const stripe = Stripe('pk_test_51RDjzqQLn2109uZQDwGQjxLb14jO1DHbcqYWHLOd3U7Ws27Le263zUXWjfa3UiWra63I7YDv8iWivSMWzgWYKqgK00nfGl1ysg');
+    const elements = stripe.elements();
+
+    // Create the card element and mount it to the payment form
+    const cardElement = elements.create('card');
+    cardElement.mount('#card-element');
+
+    // Handle the payment form submission
+    document.getElementById('pay-submit').addEventListener('click', async (event) => {
+      event.preventDefault();
+
+      const paymentError = document.getElementById('payment-error');
+      const paymentLoading = document.getElementById('payment-loading');
+      paymentError.textContent = ''; // Clear any previous errors
+      paymentError.style.display = 'none'; // Hide the error div
+      paymentLoading.style.display = 'block'; // Show loading message
+
+      // Create a payment method using the card details
+      const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement, // Use the card element for payment
+      });
+
+      if (error) {
+        paymentError.textContent = error.message; // Display error message
+        paymentError.style.display = 'block'; // Show the error div
+        paymentLoading.style.display = 'none'; // Hide loading message
+        return;
+      }
+
+      // Send payment method ID to the backend to create Payment Intent
+      const response = await fetch('http://localhost:8080/api/payments/pay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentMethodId: paymentMethod.id,  // Send payment method ID (not token)
+          amount: 2000, // Amount in cents ($20)
+          currency: 'usd',
+        }),
+      });
+
+      if (!response.ok) {
+        paymentError.textContent = 'Error contacting the server. Please try again.';
+        paymentError.style.display = 'block';
+        paymentLoading.style.display = 'none';
+        return;
+      }
+
+      const { clientSecret } = await response.json();
+      console.log(clientSecret);
+      
+      if (!clientSecret) {
+        paymentError.textContent = 'An error occurred. Please try again.';
+        paymentError.style.display = 'block';
+        paymentLoading.style.display = 'none';
+        return;
+      }
+
+      // Confirm the payment on the client side
+      const { error: confirmError } = await stripe.confirmCardPayment(clientSecret);
+
+      if (confirmError) {
+        paymentError.textContent = confirmError.message; // Display error message
+        paymentError.style.display = 'block'; // Show the error div
+      } else {
+        alert('Payment successful!');
+      }
+
+      paymentLoading.style.display = 'none'; // Hide loading message after completion
+    });
+  </script>
+</body>
+</html>
