@@ -276,6 +276,10 @@ export const deleteAdmin = async (req, res) => {
       return res.status(400).json({ message: "Admin ID is required" });
     }
 
+    if (id === 'undefined' ? req.user?.userId : id) {
+      return res.status(400).json({ message: "  you cannot delete yourself" });
+    }
+
     const admin = await prisma.user.findUnique({
       where: { id, type: 'ADMIN' },
     });

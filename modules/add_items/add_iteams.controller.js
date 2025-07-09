@@ -61,9 +61,6 @@ const generateItemData = async (item) => {
         }
       );
 
-      // Log the full API response for debugging
-      console.log("Forum suggestion API response:", forumSuggestionResponse.data); 
-
       if (forumSuggestionResponse.data && forumSuggestionResponse.data.choices && forumSuggestionResponse.data.choices[0].text) {
         forumSuggestions = forumSuggestionResponse.data.choices[0].text.split("\n");
       } else {
@@ -81,7 +78,6 @@ const generateItemData = async (item) => {
     return null;
   }
 };
-
 export const addItem = async (req, res) => {
   try {
     const { 
@@ -199,3 +195,78 @@ export const addItem = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+//GET ALL ITEMS
+export const getAllItems = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const items = await prisma.item.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        category: true,
+        name: true,
+      },
+    });
+
+    if (items.length === 0) {
+      return res.status(404).json({ message: "No items found for this user" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Items retrieved successfully",
+      items,
+    });
+  } catch (error) {
+    console.error('Error retrieving items:', error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+//get one item by id
+export const getItemById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Item ID is required" });
+    }
+
+    const item = await prisma.item.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Append full image URL if it exists
+    const formattedItem = {
+      ...item,
+      image_url: item.image_url ? `http://localhost:8080/uploads/${item.image_url}` : null,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Item retrieved successfully",
+      item: formattedItem,
+    });
+  } catch (error) {
+    console.error('Error retrieving item:', error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+
