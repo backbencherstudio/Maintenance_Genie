@@ -2,7 +2,7 @@ import express from 'express';
 
 import { upload } from '../../config/Multer.config.js';
 import { verifyUser } from '../../middlewares/verifyUsers.js';
-import { changeAdminPassword, getAllAdmins, loginAdmin, updateAdminDetails, updateImage,deleteAdmin ,inviteAdmin,getAllUsers,getTotalUsers,suspendUser,activateUser , getAllMails, changeMailStatus} from './admin.controller.js';
+import { changeAdminPassword,getMe,createService,getAllServices, getAllAdmins, loginAdmin, updateAdminDetails, updateImage,deleteAdmin ,inviteAdmin,getAllUsers,getTotalUsers,suspendUser,activateUser , getAllMails, changeMailStatus} from './admin.controller.js';
 
 const router = express.Router();
 
@@ -28,11 +28,13 @@ router.get('/get-total-users', verifyUser("ADMIN"), getTotalUsers);
 router.put('/suspend-user/:id', verifyUser("ADMIN"), suspendUser);
 //active a user
 router.put('/active-user/:id', verifyUser("ADMIN"), activateUser);
-
-
 //get all mails 
 router.get('/get-all-mails', verifyUser("ADMIN"), getAllMails);
 //change mail status 
 router.post('/change-mail-status/:id', verifyUser("ADMIN"), changeMailStatus);
-
+//create service 
+router.post('/create-service', verifyUser("ADMIN"), createService);
+router.get('/get-all-services', verifyUser("ADMIN"), getAllServices);
+//get me
+router.get('/get-me', verifyUser("ADMIN"), getMe);
 export default router;

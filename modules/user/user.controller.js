@@ -670,3 +670,40 @@ export const sendMailToAdmin = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+//get me
+export const getMe = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const imageUrl = user.avatar ? `http://localhost:8080/uploads/${user.avatar}` : null;
+
+    return res.status(200).json({
+      success: true,
+      message: "User details retrieved successfully",
+      data: { ...user, imageUrl },
+    });
+  } catch (error) {
+    console.error('Error retrieving user details:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
