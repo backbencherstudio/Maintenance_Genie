@@ -511,3 +511,316 @@ export const receiveEmailTemplate = (email, subject, message) => {
     </html>
   `;
 };
+export const generateUserListHtml = (users) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>User List Report</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+          line-height: 1.4;
+          color: #2d3748;
+          padding: 15px;
+          font-size: 13px;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 15px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .header-info {
+          flex: 1;
+        }
+        .header h1 {
+          color: #1a365d;
+          margin: 0;
+          font-size: 20px;
+          font-weight: 600;
+        }
+        .header p {
+          color: #718096;
+          margin: 3px 0 0;
+          font-size: 12px;
+        }
+        .report-meta {
+          text-align: right;
+          font-size: 11px;
+          color: #718096;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+        th {
+          background-color: #4299e1;
+          color: white;
+          text-align: left;
+          padding: 8px 10px;
+          font-weight: 500;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        td {
+          padding: 7px 10px;
+          border-bottom: 1px solid #edf2f7;
+          font-size: 12px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        .status {
+          font-weight: 500;
+          font-size: 11px;
+          padding: 3px 6px;
+          border-radius: 10px;
+          display: inline-block;
+        }
+        .status-active {
+          background-color: #f0fff4;
+          color: #38a169;
+        }
+        .status-inactive {
+          background-color: #fff5f5;
+          color: #e53e3e;
+        }
+        .subscription {
+          font-weight: 500;
+          font-size: 11px;
+        }
+        .subscribed {
+          color: #38a169;
+        }
+        .not-subscribed {
+          color: #e53e3e;
+        }
+        .plan {
+          font-weight: 500;
+          color: #4a5568;
+        }
+        .footer {
+          margin-top: 15px;
+          text-align: right;
+          font-size: 11px;
+          color: #718096;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="header-info">
+          <h1>User List</h1>
+          <p>All registered users in the system</p>
+        </div>
+        <div class="report-meta">
+          Generated: ${new Date().toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%">ID</th>
+            <th style="width: 20%">Name</th>
+            <th style="width: 25%">Email</th>
+            <th style="width: 10%">Status</th>
+            <th style="width: 12%">Subscribed</th>
+            <th style="width: 10%">Plan</th>
+            <th style="width: 15%">Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${users.map(user => `
+            <tr>
+              <td>${user.id}</td>
+              <td>${user.name}</td>
+              <td>${user.email}</td>
+              <td><span class="status status-${user.status === 'ACTIVE' ? 'active' : 'inactive'}">${user.status}</span></td>
+              <td class="subscription ${user.is_subscribed ? 'subscribed' : 'not-subscribed'}">
+                ${user.is_subscribed ? 'Yes' : 'No'}
+              </td>
+              <td class="plan">${user.Subscription?.plan || '—'}</td>
+              <td>${new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div class="footer">
+        <span>Total: ${users.length} users</span>
+      </div>
+    </body>
+    </html>
+  `;
+};
+export const generateSubscriptionHtml = (subscriptions) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Subscription Report</title>
+      <style>
+        /* Reset the margin and padding for the entire page */
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+          line-height: 1.4;
+          color: #2d3748;
+          font-size: 13px;
+          width: 100%;
+          height: 100%;
+          padding: 0;
+          margin: 0;
+        }
+
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #3498db;
+          padding-bottom: 10px;
+        }
+
+        .header h1 {
+          color: #2c3e50;
+          font-size: 24px;
+          font-weight: 600;
+        }
+
+        .report-meta {
+          text-align: right;
+          color: #7f8c8d;
+          font-size: 12px;
+          margin-bottom: 20px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+
+        th {
+          background-color: #3498db;
+          color: white;
+          padding: 12px 15px;
+          text-align: left;
+          font-weight: 500;
+          font-size: 13px;
+        }
+
+        td {
+          padding: 10px 15px;
+          border-bottom: 1px solid #ddd;
+          font-size: 13px;
+          text-align: left;
+          vertical-align: middle;
+        }
+
+        tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+
+        .status-active {
+          color: #27ae60;
+          font-weight: bold;
+        }
+
+        .status-inactive {
+          color: #e74c3c;
+          font-weight: bold;
+        }
+
+        .plan {
+          color: #4a5568;
+        }
+
+        .amount {
+          color:rgb(38, 129, 50);
+          font-weight: bold;
+        }
+
+        .footer {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 12px;
+          color: #7f8c8d;
+          border-top: 1px solid #eee;
+          padding-top: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Subscription Report</h1>
+      </div>
+
+      <div class="report-meta">
+        Generated on: ${new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 15%">User Info</th>
+            <th style="width: 20%">Plan</th>
+            <th style="width: 10%">Amount</th>
+            <th style="width: 20%">Payment Method</th>
+            <th style="width: 10%">Transaction ID</th>
+            <th style="width: 10%">Status</th>
+            <th style="width: 15%">Last Payment</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${subscriptions.map(sub => `
+            <tr>
+              <td>
+                ${sub.user.name || 'N/A'}<br>
+                <a href="mailto:${sub.user.email}" style="color: #3498db;">${sub.user.email}</a>
+              </td>
+              <td class="plan">${sub.plan}</td>
+              <td class="amount">$${(sub.PaymentTransaction[0]?.price / 100).toFixed(2)}</td>
+              <td>${sub.PaymentTransaction[0]?.payment_method || 'N/A'}</td>
+              <td>${sub.PaymentTransaction[0]?.id || 'N/A'}</td>
+              <td class="status-${sub.status.toLowerCase()}">${sub.status}</td>
+              <td>${new Date(sub.created_at).toLocaleDateString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>Total Subscriptions: ${subscriptions.length}</p>
+      </div>
+    </body>
+    </html>
+  `;
+};

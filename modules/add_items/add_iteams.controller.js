@@ -134,7 +134,7 @@ export const addItem = async (req, res) => {
 
     let generatedData;
 
-    if (isSubscribed === 1) {
+    if (isSubscribed === true) {
       
       generatedData = await generateItemData(req.body);
     } else {
@@ -268,5 +268,3 @@ export const getItemById = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
-
-
