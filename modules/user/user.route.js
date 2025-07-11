@@ -1,6 +1,23 @@
 import express from 'express';
-import { registerUserStep1, verifyOTP, registerUserStep3 } from './user.controller.js'; 
-import  upload  from '../../config/Multer.config.js'; // 
+
+import { 
+   registerUserStep1,
+   verifyOTP, 
+   registerUserStep3, 
+   loginUser, 
+   forgotPasswordOTPsend, 
+   resetPassword, 
+   verifyForgotPasswordOTP,
+   updateImage, 
+   updateUserDetails,
+   changePassword,
+   sendMailToAdmin,
+   getMe
+} from './user.controller.js'; 
+
+
+import { upload } from '../../config/Multer.config.js';
+import { verifyUser } from '../../middlewares/verifyUsers.js';
  
 
 const router = express.Router();
@@ -22,12 +39,24 @@ router.post('/upload', upload.single('file'), (req, res) => {
 router.post('/register-step1', registerUserStep1); 
 router.post('/verify-otp', verifyOTP);
 router.post('/register-step3', registerUserStep3);
+//log iin a user
+router.post('/login',loginUser);
+
+//forget pass
+router.post('/forget_pass', forgotPasswordOTPsend);
+router.post('/checkForgetPassOtp', verifyForgotPasswordOTP);
+router.post('/resetPass',resetPassword);
+router.post('/change-password', verifyUser("USER"), changePassword);
 
 
+//update user img
+router.put('/update-image',upload.single('profilePicture') , verifyUser("USER") , updateImage);
+router.put('/update-user-details', verifyUser("USER"), updateUserDetails); 
 
-// router.patch('/updateuser', varyfyUser('USER'), updateUser)
+//support
+router.post('/sende-mail', verifyUser("USER"), sendMailToAdmin )
 
-
-
+//get me 
+router.get('/get-me', verifyUser("USER"), getMe);
 
 export default router;

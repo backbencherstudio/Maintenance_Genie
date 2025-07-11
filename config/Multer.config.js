@@ -15,15 +15,25 @@ if (!fs.existsSync(uploadsDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    cb(null, uploadsDir);  
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = uuidv4(); 
-    const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
+    const ext = path.extname(file.originalname);  
+    cb(null, `${uniqueSuffix}${ext}`); 
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, 
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']; 
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Invalid file type'), false);  
+    }
+    cb(null, true); 
+  }
+});
 
-export default upload;
+export { upload };
