@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import validator from 'validator';
 import bcrypt from "bcryptjs";
-import  {upload}  from '../../config/Multer.config.js'; 
+import { upload } from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { PrismaClient } from "@prisma/client";
@@ -37,14 +37,14 @@ export const registerUserStep1 = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-  
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
 
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-   
+
     const existingTempUser = await prisma.temp.findUnique({ where: { email } });
 
     if (existingTempUser) {
@@ -164,12 +164,12 @@ export const registerUserStep3 = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.WEBTOKEN_SECRET_KEY); 
+      decoded = jwt.verify(token, process.env.WEBTOKEN_SECRET_KEY);
     } catch (error) {
       return res.status(401).json({ message: "Invalid or expired token" });
     }
 
-    const email = decoded.email; 
+    const email = decoded.email;
 
     if (!name || !password) {
       return res.status(400).json({ message: "Name and password are required" });
@@ -190,11 +190,11 @@ export const registerUserStep3 = async (req, res) => {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { email },  
+      where: { email },
       data: {
         name,
-        email, 
-        password: hashedPassword, 
+        email,
+        password: hashedPassword,
       },
     });
 
@@ -225,8 +225,15 @@ export const loginUser = async (req, res) => {
       where: {
         email,
         type: 'USER',
+        status: 'active',
       },
     });
+
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        message: 'Your account is suspended. Please contact support.',
+      })
+    }
 
 
     if (!user) {
@@ -301,14 +308,14 @@ export const forgotPasswordOTPsend = async (req, res) => {
 
     if (existingTempUser) {
       if (new Date() > new Date(existingTempUser.expires_at)) {
-        await prisma.temp.delete({ where: { email } }); 
+        await prisma.temp.delete({ where: { email } });
 
-        const otp = generateOTP(); 
+        const otp = generateOTP();
         await prisma.temp.create({
           data: {
             email,
             otp,
-            expires_at: new Date(Date.now() + 15 * 60 * 1000), 
+            expires_at: new Date(Date.now() + 15 * 60 * 1000),
           },
         });
 
@@ -321,17 +328,17 @@ export const forgotPasswordOTPsend = async (req, res) => {
 
       return res.status(400).json({
         message: "An OTP has already been sent to this email. Please check your inbox or wait for expiration.",
-        shouldResendOtp: false,  
+        shouldResendOtp: false,
       });
     }
 
     const otp = generateOTP();
-    
+
     await prisma.temp.create({
       data: {
         email,
         otp,
-        expires_at: new Date(Date.now() + 15 * 60 * 1000), 
+        expires_at: new Date(Date.now() + 15 * 60 * 1000),
       },
     });
 
@@ -366,7 +373,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "OTP expired. Please request a new OTP.",
-        shouldResendOtp: true,  
+        shouldResendOtp: true,
         ucodeId: existingTempUser.id,
       });
     }
@@ -380,11 +387,11 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     const jwtToken = jwt.sign(
       {
-        userId: existingTempUser.id,  
+        userId: existingTempUser.id,
         email: existingTempUser.email,
       },
-      process.env.WEBTOKEN_SECRET_KEY,  
-      { expiresIn: '10d' } 
+      process.env.WEBTOKEN_SECRET_KEY,
+      { expiresIn: '10d' }
     );
 
     await prisma.temp.delete({
@@ -394,7 +401,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "OTP matched successfully. You can now reset your password.",
-      token: jwtToken,  
+      token: jwtToken,
     });
   } catch (error) {
     console.error("Error in verifyForgotPasswordOTP:", error);
@@ -406,7 +413,7 @@ export const resetPassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
 
-   
+
     if (!newPassword || newPassword.length < 8) {
       return res.status(400).json({ message: 'Password must be at least 8 characters long' });
     }
@@ -457,7 +464,7 @@ export const resetPassword = async (req, res) => {
 };
 // Check if user is authenticated
 export const authenticateUser = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1]; 
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
   }
@@ -494,14 +501,14 @@ export const updateImage = async (req, res) => {
     if (existingUser.avatar) {
       const oldImagePath = path.join(__dirname, "../../uploads", existingUser.avatar);
       if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath); 
+        fs.unlinkSync(oldImagePath);
       }
     }
 
     const user = await prisma.user.update({
       where: { id: id },
       data: {
-        avatar: newImage.filename, 
+        avatar: newImage.filename,
       },
     });
 
@@ -516,13 +523,13 @@ export const updateImage = async (req, res) => {
     console.error('Error during image upload:', error);
 
     if (req.file) {
-      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename)); 
+      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
     }
 
     return res.status(500).json({
       success: false,
       message: "Something went wrong",
-      error: error instanceof Error ? error.message : "Unknown error", 
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -530,9 +537,9 @@ export const updateImage = async (req, res) => {
 export const updateUserDetails = async (req, res) => {
   try {
     const { name, email, address } = req.body;
-    const id = req.user?.userId;  
+    const id = req.user?.userId;
 
-   
+
     if (!id) {
       return res.status(400).json({ message: "User not authenticated" });
     }
@@ -549,7 +556,7 @@ export const updateUserDetails = async (req, res) => {
 
     const user = await prisma.user.update({
       where: { id: id },
-      data: dataToUpdate,  
+      data: dataToUpdate,
     });
 
     return res.status(200).json({
@@ -571,7 +578,7 @@ export const updateUserDetails = async (req, res) => {
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const userId = req.user?.userId; 
+    const userId = req.user?.userId;
 
     if (!userId) {
       return res.status(400).json({ message: "User not authenticated" });
@@ -582,7 +589,7 @@ export const changePassword = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId , type: 'USER' },
+      where: { id: userId, type: 'USER' },
     });
 
     if (!user) {
@@ -635,7 +642,7 @@ export const sendMailToAdmin = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if ( !subject || !message) {
+    if (!subject || !message) {
       return res.status(400).json({ message: "All fields are required" });
     }
 

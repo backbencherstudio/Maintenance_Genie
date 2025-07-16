@@ -2,11 +2,11 @@ import dotenv from "dotenv";
 import validator from 'validator';
 import puppeteer from 'puppeteer';
 import bcrypt from "bcryptjs";
-import  {upload}  from '../../config/Multer.config.js'; 
+import { upload } from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { PrismaClient } from "@prisma/client";
-import { sendAdminInvitationEmail} from "../../utils/mailService.js";
+import { sendAdminInvitationEmail } from "../../utils/mailService.js";
 import express from "express";
 import fs from "fs";
 import path from "path";
@@ -116,7 +116,7 @@ export const getSubscriptionStats = async (req, res) => {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
-    
+
     const monthsThisYear = [];
     for (let month = 0; month <= currentMonth; month++) {
       monthsThisYear.push(new Date(currentYear, month, 1));
@@ -125,8 +125,8 @@ export const getSubscriptionStats = async (req, res) => {
     const users = await prisma.user.findMany({
       where: {
         created_at: {
-          gte: new Date(currentYear, 0, 1), 
-          lte: currentDate 
+          gte: new Date(currentYear, 0, 1),
+          lte: currentDate
         },
         is_subscribed: true,
       },
@@ -141,7 +141,7 @@ export const getSubscriptionStats = async (req, res) => {
     users.forEach(user => {
       const userMonth = user.created_at.getMonth();
       const userYear = user.created_at.getFullYear();
-      
+
       if (userYear === currentYear) {
         const monthIndex = monthsThisYear.findIndex(
           date => date.getMonth() === userMonth
@@ -166,10 +166,10 @@ export const getSubscriptionStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error retrieving subscription statistics:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      message: "Internal Server Error", 
-      error: error.message 
+      message: "Internal Server Error",
+      error: error.message
     });
   }
 };
@@ -248,11 +248,11 @@ export const activeSubscription = async (req, res) => {
 //get all users
 export const getAllUsers = async (req, res) => {
   try {
-    const { 
-      sortBy = 'created_at', 
+    const {
+      sortBy = 'created_at',
       order = 'desc',
       statusFilter,
-      subscriptionFilter 
+      subscriptionFilter
     } = req.query;
 
     const validSortByFields = ['created_at', 'name', 'status', 'subscription_plan'];
@@ -290,9 +290,9 @@ export const getAllUsers = async (req, res) => {
     });
 
     if (users.length === 0) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "No users found matching your criteria" 
+        message: "No users found matching your criteria"
       });
     }
 
@@ -326,10 +326,10 @@ export const getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error retrieving users:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: "Internal Server Error",
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -357,7 +357,7 @@ export const printListPdf = async (req, res) => {
       return res.status(404).json({ message: "No users found" });
     }
 
-  const htmlContent = generateUserListHtml(users);
+    const htmlContent = generateUserListHtml(users);
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -365,7 +365,7 @@ export const printListPdf = async (req, res) => {
 
     const pdfBuffer = await page.pdf({
       format: 'A3',
-      printBackground: true, 
+      printBackground: true,
     });
 
     await browser.close();
@@ -398,7 +398,7 @@ export const suspendUser = async (req, res) => {
 
     await prisma.user.update({
       where: { id, type: 'USER' },
-      data: { status: 'suspended' }, 
+      data: { status: 'suspended' },
     });
 
     return res.status(200).json({
@@ -429,7 +429,7 @@ export const activateUser = async (req, res) => {
 
     await prisma.user.update({
       where: { id, type: 'USER' },
-      data: { status: 'active' }, 
+      data: { status: 'active' },
     });
 
     return res.status(200).json({
@@ -446,11 +446,11 @@ export const activateUser = async (req, res) => {
 //get all subscriptions
 export const getAllsubscriptions = async (req, res) => {
   try {
-    const { 
-      sortBy = 'created_at', 
+    const {
+      sortBy = 'created_at',
       order = 'desc',
       statusFilter,
-      planFilter 
+      planFilter
     } = req.query;
 
     // Valid fields and values for sorting and filtering
@@ -462,7 +462,7 @@ export const getAllsubscriptions = async (req, res) => {
     // Validate sorting parameters
     const sortByField = validSortByFields.includes(sortBy) ? sortBy : 'created_at';
     const orderBy = validOrder.includes(order) ? order : 'desc';
-    
+
     // Apply filters
     const status = validStatusFilters.includes(statusFilter) ? statusFilter : undefined;
     const plan = validPlanFilters.includes(planFilter) ? planFilter : undefined;
@@ -507,7 +507,7 @@ export const getAllsubscriptions = async (req, res) => {
         plan: sub.plan,
         payment_method: sub.PaymentTransaction[0]?.payment_method || null,
         payment_transaction_id: sub.PaymentTransaction[0]?.id || null,
-        status: sub.status, 
+        status: sub.status,
       };
     });
 
@@ -590,10 +590,10 @@ export const getSubscriptionPdf = async (req, res) => {
     res.send(pdfBuffer);
   } catch (error) {
     console.error('Error generating subscriptions PDF:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      message: "Internal Server Error", 
-      error: error.message 
+      message: "Internal Server Error",
+      error: error.message
     });
   }
 };
@@ -671,7 +671,7 @@ export const createService = async (req, res) => {
         name,
         description,
         price: parseFloat(price),
-        features: JSON.parse(features), 
+        features: JSON.parse(features),
         plan,
       },
     });
@@ -716,9 +716,9 @@ export const updateSettings = async (req, res) => {
   try {
     const { description, contact_email, contact_phone, time_zone } = req.body;
 
-   
+
     const setting = await prisma.general_Settings.update({
-      where: { id:"cmcyniqg30000rej8ojyardm5" },
+      where: { id: "cmcyniqg30000rej8ojyardm5" },
       data: {
         description,
         contact_email,
@@ -740,7 +740,7 @@ export const updateSettings = async (req, res) => {
 }
 //get general settings
 export const getGeneralSettings = async (req, res) => {
-  try { 
+  try {
     const setting = await prisma.general_Settings.findUnique({
       where: { id: "cmcyniqg30000rej8ojyardm5" },
     });
@@ -755,7 +755,9 @@ export const getGeneralSettings = async (req, res) => {
       data: setting,
     });
   } catch (error) {
-    console.error('Error retrieving general settings:', error);}}
+    console.error('Error retrieving general settings:', error);
+  }
+}
 
 //admin info
 //get me
@@ -800,7 +802,7 @@ export const changeAdminPassword = async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     const userId = req.user.userId;
     console.log('User ID:', userId);
-    
+
 
     if (!oldPassword || !newPassword) {
       res.status(400).json({
@@ -871,14 +873,14 @@ export const updateImage = async (req, res) => {
     if (existingUser.avatar) {
       const oldImagePath = path.join(__dirname, "../../uploads", existingUser.avatar);
       if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath); 
+        fs.unlinkSync(oldImagePath);
       }
     }
 
     const user = await prisma.user.update({
       where: { id: id, type: 'ADMIN' },
       data: {
-        avatar: newImage.filename, 
+        avatar: newImage.filename,
       },
     });
 
@@ -888,20 +890,20 @@ export const updateImage = async (req, res) => {
       success: true,
       message: "Image updated successfully",
       data: { ...user, imageUrl },
-   
-      
+
+
     });
   } catch (error) {
     console.error('Error during image upload:', error);
 
     if (req.file) {
-      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename)); 
+      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
     }
 
     return res.status(500).json({
       success: false,
       message: "Something went wrong",
-      error: error instanceof Error ? error.message : "Unknown error", 
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -930,7 +932,7 @@ export const updateAdminDetails = async (req, res) => {
 
     const user = await prisma.user.update({
       where: { id: id, type: 'ADMIN' },
-      data: dataToUpdate,  
+      data: dataToUpdate,
     });
 
     return res.status(200).json({
@@ -1028,19 +1030,19 @@ export const inviteAdmin = async (req, res) => {
       return res.status(400).json({ message: "Admin with this email already exists" });
     }
 
-      const rawPassword = randomBytes(6).toString('base64');
-      const hashedPassword = await bcrypt.hash(rawPassword, 10);
-       
-      const addAdmin = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          type: 'ADMIN',
-        },
-      });
+    const rawPassword = randomBytes(6).toString('base64');
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    const addAdmin = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        type: 'ADMIN',
+      },
+    });
 
 
-      sendAdminInvitationEmail(email, rawPassword);
+    sendAdminInvitationEmail(email, rawPassword);
 
     return res.status(200).json({
       success: true,

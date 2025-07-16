@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import validator from 'validator';
-import { upload } from '../../config/Multer.config.js'; 
+import { upload } from '../../config/Multer.config.js';
 import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
@@ -49,25 +49,25 @@ const generateItemData = async (item) => {
     );
 
     let forumSuggestions = [];
-      const forumSuggestionResponse = await axios.post(
-        'https://api.together.xyz/v1/completions',
-        {
-          model: 'mistralai/Mistral-7B-Instruct-v0.1',
-          prompt: forumSuggestionPrompt,
-          max_tokens: 150,
-        },
-        {
-          headers: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` }
-        }
-      );
-
-      if (forumSuggestionResponse.data && forumSuggestionResponse.data.choices && forumSuggestionResponse.data.choices[0].text) {
-        forumSuggestions = forumSuggestionResponse.data.choices[0].text.split("\n");
-      } else {
-        console.error("Forum suggestions are empty or malformed:", forumSuggestionResponse.data);
-        forumSuggestions = [];
+    const forumSuggestionResponse = await axios.post(
+      'https://api.together.xyz/v1/completions',
+      {
+        model: 'mistralai/Mistral-7B-Instruct-v0.1',
+        prompt: forumSuggestionPrompt,
+        max_tokens: 150,
+      },
+      {
+        headers: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` }
       }
-    
+    );
+
+    if (forumSuggestionResponse.data && forumSuggestionResponse.data.choices && forumSuggestionResponse.data.choices[0].text) {
+      forumSuggestions = forumSuggestionResponse.data.choices[0].text.split("\n");
+    } else {
+      console.error("Forum suggestions are empty or malformed:", forumSuggestionResponse.data);
+      forumSuggestions = [];
+    }
+
 
     return {
       service_intervals: serviceIntervalResponse.data.choices[0].text.split("\n"),
@@ -80,18 +80,18 @@ const generateItemData = async (item) => {
 };
 export const addItem = async (req, res) => {
   try {
-    const { 
-      name, 
-      brand, 
-      model, 
+    const {
+      name,
+      brand,
+      model,
       vin,
-      price, 
-      image_url, 
-      purchase_date, 
-      total_mileage, 
-      last_service_date, 
-      last_service_name, 
-      Category
+      price,
+      image_url,
+      purchase_date,
+      total_mileage,
+      last_service_date,
+      last_service_name,
+      category
     } = req.body;
 
     const formattedPurchaseDate = purchase_date ? new Date(purchase_date) : null;
@@ -113,7 +113,7 @@ export const addItem = async (req, res) => {
     }
 
     const isSubscribed = user.is_subscribed;
-    console.log('User subscription status:', isSubscribed); 
+    console.log('User subscription status:', isSubscribed);
 
     const newItem = await prisma.item.create({
       data: {
@@ -125,17 +125,20 @@ export const addItem = async (req, res) => {
         total_mileage: mileage,
         last_service_date: formattedLastServiceDate,
         last_service_name,
-        Category,
+        category,
         image_url: req.file ? req.file.filename : null,
         price,
         user_id: userId,
       },
     });
 
+    console.log(newItem);
+
+
     let generatedData;
 
     if (isSubscribed === true) {
-      
+
       generatedData = await generateItemData(req.body);
     } else {
       const serviceIntervalPrompt = `

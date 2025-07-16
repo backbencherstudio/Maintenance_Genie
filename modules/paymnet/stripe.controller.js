@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import Stripe from 'stripe';
 import { PrismaClient } from "@prisma/client";
+import cron from 'node-cron';
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const prisma = new PrismaClient();
@@ -23,7 +25,6 @@ export const createPaymentIntent = async (req, res) => {
     const { email, role, type, userId } = req.user || {};
     console.log('User Info:', { email, role, type, userId });
 
-    // Prisma transaction rollback 
     const transaction = await prisma.$transaction(async (prismaTx) => {
       try {
         const paymentIntent = await stripe.paymentIntents.create({
@@ -50,9 +51,9 @@ export const createPaymentIntent = async (req, res) => {
           },
         });
 
-        console.log('Payment Transaction Created:', paymentTransaction);
-        console.log('Payment Intent Created:', paymentIntent.client_secret);
-        console.log('Payment Intent Metadata:', paymentIntent.metadata);
+        // console.log('Payment Transaction Created:', paymentTransaction);
+        // console.log('Payment Intent Created:', paymentIntent.client_secret);
+        // console.log('Payment Intent Metadata:', paymentIntent.metadata);
 
         return paymentIntent.client_secret;
       } catch (error) {
@@ -88,7 +89,11 @@ export const handleWebhook = async (req, res) => {
   console.log(`Received event type: ${event.type}`);
 
   switch (event.type) {
+    case 'payment_intent.created':
+      // console.log('Payment Intent Created:', event.data.object);
+      break;
     case 'payment_intent.succeeded':
+      console.log('Payment Intent Succeeded:', event.data.object);
       await handlePaymentIntentSucceeded(event.data.object);
       break;
 
@@ -125,7 +130,7 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
 
       console.log(`User ${user_id}'s role updated to "premium".`);
 
-      
+
       const service = await prismaTx.services.findUnique({
         where: { id: service_id },
       });
@@ -201,9 +206,9 @@ const calculateSubscriptionEndDate = (startDate, plan) => {
   const endDate = new Date(startDate);
 
   if (plan === "HalfYearly") {
-    endDate.setMonth(startDate.getMonth() + 6); 
+    endDate.setMonth(startDate.getMonth() + 6);
   } else {
-    endDate.setFullYear(startDate.getFullYear() + 1); 
+    endDate.setFullYear(startDate.getFullYear() + 1);
   }
 
   return endDate;
