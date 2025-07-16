@@ -2,7 +2,7 @@ import express from 'express';
 
 import { upload } from '../../config/Multer.config.js';
 import { verifyUser } from '../../middlewares/verifyUsers.js';
-import { changeAdminPassword,getMe,updateSettings,getGeneralSettings,getSubscriptionPdf,getAllsubscriptions,monthlyRevenue,getSubscriptionStats ,activeSubscription,printListPdf,createService,getAllServices, getAllAdmins, loginAdmin, updateAdminDetails, updateImage,deleteAdmin ,inviteAdmin,getAllUsers,getTotalUsers,suspendUser,activateUser , getAllMails, changeMailStatus} from './admin.controller.js';
+import { changeAdminPassword, getMe, updateSettings, getGeneralSettings, getSubscriptionPdf, getAllsubscriptions, monthlyRevenue, getSubscriptionStats, activeSubscription, printListPdf, createService, getAllServices, getAllAdmins, loginAdmin, updateAdminDetails, updateImage, deleteAdmin, inviteAdmin, getAllUsers, getTotalUsers, suspendUser, activateUser, getAllMails, changeMailStatus } from './admin.controller.js';
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.post('/login', loginAdmin);
 //get total number of users
 router.get('/get-total-users', verifyUser("ADMIN"), getTotalUsers);
 //get active subscriptions in the last month
-router.get('/get-active-subscriptions-last-month', verifyUser("ADMIN"), activeSubscription )
+router.get('/get-active-subscriptions-last-month', verifyUser("ADMIN"), activeSubscription)
 //monthly revenue
 router.get('/get-monthly-revenue', verifyUser("ADMIN"), monthlyRevenue);
 //get chart data
@@ -47,7 +47,7 @@ router.get('/get-me', verifyUser("ADMIN"), getMe);
 //admin change password
 router.post('/change-password', verifyUser("ADMIN"), changeAdminPassword);
 //admin profile image upload
-router.put('/update-image',upload.single('profilePicture') , verifyUser("ADMIN") , updateImage);
+router.put('/update-image', upload.single('profilePicture'), verifyUser("ADMIN"), updateImage);
 //update admin details
 router.put('/update-admin-details', verifyUser("ADMIN"), updateAdminDetails);
 //Admins
@@ -59,5 +59,5 @@ router.delete('/delete-admin/:id', verifyUser("ADMIN"), deleteAdmin);
 router.post('/invite-admin', verifyUser("ADMIN"), inviteAdmin)
 //----------------------------------------------------------------create service----------------------------------------------------------------\\
 router.post('/create-service', verifyUser("ADMIN"), createService);
-router.get('/get-all-services', verifyUser("ADMIN"), getAllServices);
+router.get('/get-all-services', getAllServices);
 export default router;

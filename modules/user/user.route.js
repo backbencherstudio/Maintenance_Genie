@@ -1,24 +1,24 @@
 import express from 'express';
 
-import { 
-   registerUserStep1,
-   verifyOTP, 
-   registerUserStep3, 
-   loginUser, 
-   forgotPasswordOTPsend, 
-   resetPassword, 
-   verifyForgotPasswordOTP,
-   updateImage, 
-   updateUserDetails,
-   changePassword,
-   sendMailToAdmin,
-   getMe
-} from './user.controller.js'; 
+import {
+  registerUserStep1,
+  verifyOTP,
+  registerUserStep3,
+  loginUser,
+  forgotPasswordOTPsend,
+  resetPassword,
+  verifyForgotPasswordOTP,
+  updateImage,
+  updateUserDetails,
+  changePassword,
+  sendMailToAdmin,
+  getMe
+} from './user.controller.js';
 
 
 import { upload } from '../../config/Multer.config.js';
 import { verifyUser } from '../../middlewares/verifyUsers.js';
- 
+
 
 const router = express.Router();
 
@@ -36,25 +36,25 @@ router.post('/upload', upload.single('file'), (req, res) => {
 });
 
 //Register a user
-router.post('/register-step1', registerUserStep1); 
+router.post('/register-step1', registerUserStep1);
 router.post('/verify-otp', verifyOTP);
 router.post('/register-step3', registerUserStep3);
 //log iin a user
-router.post('/login',loginUser);
+router.post('/login', loginUser);
 
 //forget pass
 router.post('/forget_pass', forgotPasswordOTPsend);
 router.post('/checkForgetPassOtp', verifyForgotPasswordOTP);
-router.post('/resetPass',resetPassword);
+router.post('/resetPass', resetPassword);
 router.post('/change-password', verifyUser("USER"), changePassword);
 
 
 //update user img
-router.put('/update-image',upload.single('profilePicture') , verifyUser("USER") , updateImage);
-router.put('/update-user-details', verifyUser("USER"), updateUserDetails); 
+router.put('/update-image', upload.single('profilePicture'), verifyUser("USER"), updateImage);
+router.put('/update-user-details', verifyUser("USER"), updateUserDetails);
 
 //support
-router.post('/sende-mail', verifyUser("USER"), sendMailToAdmin )
+router.post('/sende-mail', verifyUser("USER"), sendMailToAdmin)
 
 //get me 
 router.get('/get-me', verifyUser("USER"), getMe);
