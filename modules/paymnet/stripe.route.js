@@ -5,11 +5,7 @@ import { verifyUser } from '../../middlewares/verifyUsers.js';
 const router = express.Router();
 
 router.post('/pay', verifyUser("USER"), createPaymentIntent);
-router.post(
-  "/webhook",
-
-  handleWebhook
-);
+router.post("/webhook", handleWebhook);
 
 
 export default router;

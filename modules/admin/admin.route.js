@@ -2,7 +2,32 @@ import express from 'express';
 
 import { upload } from '../../config/Multer.config.js';
 import { verifyUser } from '../../middlewares/verifyUsers.js';
-import { changeAdminPassword, getMe, updateSettings, getGeneralSettings, getSubscriptionPdf, getAllsubscriptions, monthlyRevenue, getSubscriptionStats, activeSubscription, printListPdf, createService, getAllServices, getAllAdmins, loginAdmin, updateAdminDetails, updateImage, deleteAdmin, inviteAdmin, getAllUsers, getTotalUsers, suspendUser, activateUser, getAllMails, changeMailStatus } from './admin.controller.js';
+import {
+    changeAdminPassword,
+    getMe,
+    updateSettings,
+    getGeneralSettings,
+    getSubscriptionPdf,
+    getAllsubscriptions,
+    monthlyRevenue,
+    getSubscriptionStats,
+    activeSubscription,
+    printListPdf,
+    createService,
+    getAllServices,
+    getAllAdmins,
+    loginAdmin,
+    updateAdminDetails,
+    updateImage,
+    deleteAdmin,
+    inviteAdmin,
+    getAllUsers,
+    getTotalUsers,
+    suspendUser,
+    activateUser,
+    getAllMails,
+    changeMailStatus
+} from './admin.controller.js';
 
 const router = express.Router();
 
