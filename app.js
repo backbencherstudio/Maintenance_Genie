@@ -28,7 +28,6 @@ app.use(
     credentials: true,  
   })
 );
-
 //cron job to update subscriptions daily
 // This job runs every day at midnight
 let counter = 0;
