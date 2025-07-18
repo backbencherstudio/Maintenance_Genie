@@ -29,7 +29,7 @@ app.use(
   })
 );
 //cron job to update subscriptions daily
-// This job runs every day at midnight
+// Refresh the counter every day at midnight
 let counter = 0;
 nodeCron.schedule('0 0 * * *', async () => { 
   try {
