@@ -88,12 +88,16 @@ nodeCron.schedule('0 0 * * *', async () => {
   }
 });
 app.use((req, res, next) => {
-  if (req.originalUrl == '/api/payments/webhook') {
+  // Check if the request is to the Stripe webhook endpoint
+  if (req.originalUrl === '/api/payments/webhook') {
+    // Use express.raw() to handle the raw request body for the webhook
     express.raw({ type: 'application/json' })(req, res, next);
   } else {
+    // Use express.json() for all other routes
     express.json()(req, res, next);
   }
 });
+
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use('/api/users', userRoutes);
