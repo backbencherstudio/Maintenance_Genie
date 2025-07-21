@@ -75,7 +75,7 @@ export const loginAdmin = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.createdAt,
+        createdAt: user.created_at,
         updatedAt: user.updatedAt,
       },
       token,
@@ -89,7 +89,6 @@ export const loginAdmin = async (req, res) => {
   }
 };
 //--------------------------------------------------------home page------------------------------------------------------------\\
-
 //total number of users
 export const getTotalUsers = async (req, res) => {
   try {
@@ -192,6 +191,10 @@ export const monthlyRevenue = async (req, res) => {
       },
     });
 
+    if(revenue._sum.price === null) {
+      return res.status(200).json({success:true ,  data: { _sum: { price: 0 } } , message: "No revenue found for the last month" });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Monthly revenue retrieved successfully",
@@ -202,6 +205,42 @@ export const monthlyRevenue = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+export const thisMonthRevenue = async (req, res) => {
+  try {
+    const currentDate = new Date();
+    const thisMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const thisMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+    const revenue = await prisma.subscription.aggregate({
+      _sum: {
+        price: true,
+      },
+      where: {
+        created_at: {
+          gte: thisMonthStart,
+          lte: thisMonthEnd,
+        },
+      },
+    });
+
+    if(revenue._sum.price === null) {
+      return res.status(404).json({ data: {
+        _sum: {
+        price: 0
+        }
+      } });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "This month's revenue retrieved successfully",
+      data: revenue,
+    });
+  } catch (error) {
+    console.error('Error retrieving this month\'s revenue:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+}
 //active subscription in the last month
 export const activeSubscription = async (req, res) => {
   try {
@@ -229,7 +268,7 @@ export const activeSubscription = async (req, res) => {
     });
 
     if (activeSubscriptionsCount === 0) {
-      return res.status(200).json({ message: "No active subscriptions found for the last month" });
+      return res.status(200).json({success: true, data: { activeSubscriptionsCount: 0 , message: "No active subscriptions found for the last month" }});
     }
 
     return res.status(200).json({

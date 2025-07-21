@@ -21,7 +21,9 @@ app.use(
       "http://localhost:3000",         
       "http://localhost:8080",         
       "http://127.0.0.1:5500",        
-      "https://eea9f755b5c2.ngrok-free.app",  
+      "https://f7acfea4e102.ngrok-free.app",
+      "https://maintenance-genie-72uvp6qac-bbsfullstacks-projects.vercel.app/admin",
+      "https://maintenance-genie-bay.vercel.app"
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE'], 
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],  
@@ -88,12 +90,9 @@ nodeCron.schedule('0 0 * * *', async () => {
   }
 });
 app.use((req, res, next) => {
-  // Check if the request is to the Stripe webhook endpoint
   if (req.originalUrl === '/api/payments/webhook') {
-    // Use express.raw() to handle the raw request body for the webhook
     express.raw({ type: 'application/json' })(req, res, next);
   } else {
-    // Use express.json() for all other routes
     express.json()(req, res, next);
   }
 });
@@ -110,7 +109,6 @@ app.get("/", (req, res) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 
 app.use((req, res, next) => {
   res.status(404).json({

@@ -26,7 +26,8 @@ import {
     suspendUser,
     activateUser,
     getAllMails,
-    changeMailStatus
+    changeMailStatus,
+    thisMonthRevenue
 } from './admin.controller.js';
 
 const router = express.Router();
@@ -85,4 +86,6 @@ router.post('/invite-admin', verifyUser("ADMIN"), inviteAdmin)
 //----------------------------------------------------------------create service----------------------------------------------------------------\\
 router.post('/create-service', verifyUser("ADMIN"), createService);
 router.get('/get-all-services', getAllServices);
+// this month revenue
+router.get('/thismonths', verifyUser("ADMIN"),thisMonthRevenue);
 export default router;
