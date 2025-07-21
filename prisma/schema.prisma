@@ -97,6 +97,7 @@ model Subscription {
   price      Float?
   user_id    String
   user       User     @relation(fields: [user_id], references: [id])
+  username  String?
   
   plan       Plan
   start_date DateTime

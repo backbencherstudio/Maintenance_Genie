@@ -590,9 +590,9 @@ export const generateUserListHtml = (users) => {
           background-color: #f0fff4;
           color: #38a169;
         }
-        .status-inactive {
+        .status-suspended {
           background-color: #fff5f5;
-          color: #e53e3e;
+          color: #c51a1aff;
         }
         .subscription {
           font-weight: 500;
@@ -641,7 +641,6 @@ export const generateUserListHtml = (users) => {
             <th style="width: 25%">Email</th>
             <th style="width: 10%">Status</th>
             <th style="width: 12%">Subscribed</th>
-            <th style="width: 10%">Plan</th>
             <th style="width: 15%">Joined</th>
           </tr>
         </thead>
@@ -651,11 +650,10 @@ export const generateUserListHtml = (users) => {
               <td>${user.id}</td>
               <td>${user.name}</td>
               <td>${user.email}</td>
-              <td><span class="status status-${user.status === 'ACTIVE' ? 'active' : 'inactive'}">${user.status}</span></td>
+              <td><span class="status status-${user.status === 'active' ? 'active' : 'suspended'}">${user.status}</span></td>
               <td class="subscription ${user.is_subscribed ? 'subscribed' : 'not-subscribed'}">
                 ${user.is_subscribed ? 'Yes' : 'No'}
               </td>
-              <td class="plan">${user.Subscription?.plan || '—'}</td>
               <td>${new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
             </tr>
           `).join('')}

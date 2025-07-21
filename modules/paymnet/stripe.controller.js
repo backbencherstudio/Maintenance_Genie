@@ -122,6 +122,7 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
       // 1. Update user 
       const userUpdate = await prismaTx.user.update({
         where: { id: user_id },
+        select: { name: true },
         data: {
           role: "premium",
           is_subscribed: true,
@@ -146,6 +147,7 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
         data: {
           service_id: service_id,
           user_id: user_id,
+          username: userUpdate.name,
           plan: plan,
           start_date: startDate,
           end_date: endDate,

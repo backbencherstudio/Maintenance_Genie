@@ -17,6 +17,7 @@ import cookieParser from 'cookie-parser';
 import { token } from "morgan";
 import { type } from "os";
 import { generateSubscriptionHtml, generateUserListHtml } from "../../constants/email_message.js";
+import { create } from "domain";
 
 const prisma = new PrismaClient();
 const { sign, verify } = pkg;
@@ -520,6 +521,7 @@ export const getAllsubscriptions = async (req, res) => {
           select: {
             id: true,
             email: true,
+            name: true,
           },
         },
         PaymentTransaction: {
@@ -541,12 +543,14 @@ export const getAllsubscriptions = async (req, res) => {
 
     const formattedSubscriptions = subscriptions.map(sub => {
       return {
+        username: sub.user.name || 'N/A',
         user_id: sub.user.id,
         user_email: sub.user.email,
         plan: sub.plan,
         payment_method: sub.PaymentTransaction[0]?.payment_method || null,
         payment_transaction_id: sub.PaymentTransaction[0]?.id || null,
         status: sub.status,
+        created_at: sub.created_at,
       };
     });
 
