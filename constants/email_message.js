@@ -624,12 +624,12 @@ export const generateUserListHtml = (users) => {
         </div>
         <div class="report-meta">
           Generated: ${new Date().toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}
         </div>
       </div>
       
@@ -746,7 +746,7 @@ export const generateSubscriptionHtml = (subscriptions) => {
           font-weight: bold;
         }
 
-        .status-inactive {
+        .status-ended {
           color: #e74c3c;
           font-weight: bold;
         }
@@ -756,8 +756,12 @@ export const generateSubscriptionHtml = (subscriptions) => {
         }
 
         .amount {
-          color:rgb(38, 129, 50);
+          color: rgb(38, 129, 50);
           font-weight: bold;
+        }
+
+        .date-cell {
+          white-space: nowrap;
         }
 
         .footer {
@@ -776,9 +780,9 @@ export const generateSubscriptionHtml = (subscriptions) => {
       </div>
 
       <div class="report-meta">
-        Generated on: ${new Date().toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
+        Generated on: ${new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit'
@@ -788,11 +792,11 @@ export const generateSubscriptionHtml = (subscriptions) => {
       <table>
         <thead>
           <tr>
-            <th style="width: 15%">User Info</th>
-            <th style="width: 20%">Plan</th>
-            <th style="width: 10%">Amount</th>
-            <th style="width: 20%">Payment Method</th>
-            <th style="width: 10%">Transaction ID</th>
+            <th style="width: 20%">User Info</th>
+            <th style="width: 15%">Plan</th>
+            <th style="width: 15%">Amount</th>
+            <th style="width: 15%">Start Date</th>
+            <th style="width: 15%">End Date</th>
             <th style="width: 10%">Status</th>
             <th style="width: 15%">Last Payment</th>
           </tr>
@@ -801,15 +805,15 @@ export const generateSubscriptionHtml = (subscriptions) => {
           ${subscriptions.map(sub => `
             <tr>
               <td>
-                ${sub.user.name || 'N/A'}<br>
-                <a href="mailto:${sub.user.email}" style="color: #3498db;">${sub.user.email}</a>
+                ${sub.user?.name || 'N/A'}<br>
+                <a href="mailto:${sub.user?.email || ''}" style="color: #3498db;">${sub.user?.email || 'N/A'}</a>
               </td>
-              <td class="plan">${sub.plan}</td>
-              <td class="amount">$${(sub.PaymentTransaction[0]?.price / 100).toFixed(2)}</td>
-              <td>${sub.PaymentTransaction[0]?.payment_method || 'N/A'}</td>
-              <td>${sub.PaymentTransaction[0]?.id || 'N/A'}</td>
+              <td class="plan">${sub.service?.name || sub.plan || 'N/A'}</td>
+              <td class="amount">$${(sub.price ? sub.price.toFixed(2) : (sub.service?.price?.toFixed(2) || '0.00'))}</td>
+              <td class="date-cell">${sub.start_date ? new Date(sub.start_date).toLocaleDateString() : 'N/A'}</td>
+              <td class="date-cell">${sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}</td>
               <td class="status-${sub.status.toLowerCase()}">${sub.status}</td>
-              <td>${new Date(sub.created_at).toLocaleDateString()}</td>
+              <td class="date-cell">${sub.PaymentTransaction?.[0]?.created_at ? new Date(sub.PaymentTransaction[0].created_at).toLocaleDateString() : new Date(sub.created_at).toLocaleDateString()}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -817,6 +821,8 @@ export const generateSubscriptionHtml = (subscriptions) => {
 
       <div class="footer">
         <p>Total Subscriptions: ${subscriptions.length}</p>
+        <p>Active Subscriptions: ${subscriptions.filter(s => s.status === 'Active').length}</p>
+        <p>Ended Subscriptions: ${subscriptions.filter(s => s.status === 'Ended').length}</p>
       </div>
     </body>
     </html>
