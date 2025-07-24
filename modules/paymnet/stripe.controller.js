@@ -70,8 +70,6 @@ export const createPaymentIntent = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-
 //webhook handler
 export const handleWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -157,15 +155,15 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
 
       console.log(`Subscription created for user ${user_id} with plan ${plan}.`);
 
-      // const paymentTransaction = await prismaTx.paymentTransaction.update({
-      //   where: { id: paymentIntent.id },
-      //   data: {
-      //     status: "succeeded",
-      //     subscription: { connect: { id: subscription.id } },
-      //   },
-      // });
+      const paymentTransaction = await prismaTx.paymentTransaction.update({
+        where: { id: paymentIntent.id },
+        data: {
+          status: "succeeded",
+          subscription: { connect: { id: subscription.id } },
+        },
+      });
 
-      // console.log(`Payment transaction updated for user ${user_id}:`, paymentTransaction);
+      console.log(`Payment transaction updated for user ${user_id}:`, paymentTransaction);
 
       return 'Payment Intent Success';
     } catch (error) {
