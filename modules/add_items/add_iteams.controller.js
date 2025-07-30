@@ -132,6 +132,18 @@ export const addItem = async (req, res) => {
       },
     });
 
+
+    // will also create the task here ------↴
+    // const newTask = await prisma.tasks.create({
+    //   data: {
+    //     item_id: newItem.id,
+    //     task_name: "First Service",
+    //     task_description: "This is the first service task for your item.",
+    //     due_date: formattedLastServiceDate ? new Date(formattedLastServiceDate.getTime() + 30 * 24 * 60 * 60 * 1000) : null,
+    //     status: "Pending",
+    //   },
+    // })
+   
     console.log(newItem);
 
 
