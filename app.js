@@ -104,7 +104,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/items', addItemRoutes);
 app.use('/api/payments', pay);
 app.get("/", (req, res) => {
-  res.send("Welcome to Maintenance Genie API");
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
