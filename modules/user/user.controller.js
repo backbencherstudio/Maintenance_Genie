@@ -134,7 +134,7 @@ export const verifyOTP = async (req, res) => {
         userId: verifiedUser.id,
         email: verifiedUser.email,
       },
-      process.env.WEBTOKEN_SECRET_KEY,
+      process.env.JWT_SECRET,
       { expiresIn: "10d" }
     );
 
@@ -164,7 +164,7 @@ export const registerUserStep3 = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.WEBTOKEN_SECRET_KEY);
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       return res.status(401).json({ message: "Invalid or expired token" });
     }
@@ -390,7 +390,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
         userId: existingTempUser.id,
         email: existingTempUser.email,
       },
-      process.env.WEBTOKEN_SECRET_KEY,
+      process.env.JWT_SECRET,
       { expiresIn: '10d' }
     );
 
@@ -426,7 +426,7 @@ export const resetPassword = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.WEBTOKEN_SECRET_KEY);
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       return res.status(401).json({ message: 'Invalid or expired token' });
     }
