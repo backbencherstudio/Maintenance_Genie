@@ -1,11 +1,11 @@
-import jwt from 'jsonwebtoken';
 import Stripe from 'stripe';
 import { PrismaClient } from "@prisma/client";
-import cron from 'node-cron';
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const prisma = new PrismaClient();
+
+
 
 export const createPaymentIntent = async (req, res) => {
   try {
@@ -41,10 +41,10 @@ export const createPaymentIntent = async (req, res) => {
           }
         });
 
-        const paymentTransaction = await prismaTx.paymentTransaction.create({
+        await prismaTx.paymentTransaction.create({
           data: {
             user: { connect: { id: userId } },
-            price: paymentIntent.amount,
+            price: paymentIntent.amount / 100,
             currency: paymentIntent.currency,
             status: "pending",
             payment_method: paymentIntent.payment_method,
@@ -70,6 +70,7 @@ export const createPaymentIntent = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 //webhook handler
 export const handleWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -106,7 +107,7 @@ export const handleWebhook = async (req, res) => {
 
   res.json({ received: true });
 };
-//nesssary functions for handling payment intent succeeded and failed
+
 const handlePaymentIntentSucceeded = async (paymentIntent) => {
   const { user_id, service_id, plan } = paymentIntent.metadata;
 
@@ -117,7 +118,15 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
 
   const transaction = await prisma.$transaction(async (prismaTx) => {
     try {
-      // 1. Update user 
+      const paymentTransaction = await prismaTx.paymentTransaction.findFirst({
+        where: { user_id: user_id, status: "pending" },
+      });
+
+      if (!paymentTransaction) {
+        throw new Error('PaymentTransaction not found for the provided user ID');
+      }
+
+      // Update user
       const userUpdate = await prismaTx.user.update({
         where: { id: user_id },
         select: { name: true },
@@ -128,7 +137,6 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
       });
 
       console.log(`User ${user_id}'s role updated to "premium".`);
-
 
       const service = await prismaTx.services.findUnique({
         where: { id: service_id },
@@ -155,15 +163,15 @@ const handlePaymentIntentSucceeded = async (paymentIntent) => {
 
       console.log(`Subscription created for user ${user_id} with plan ${plan}.`);
 
-      const paymentTransaction = await prismaTx.paymentTransaction.update({
-        where: { id: paymentIntent.id },
+      const updatedPaymentTransaction = await prismaTx.paymentTransaction.update({
+        where: { id: paymentTransaction.id },
         data: {
           status: "succeeded",
           subscription: { connect: { id: subscription.id } },
         },
       });
 
-      console.log(`Payment transaction updated for user ${user_id}:`, paymentTransaction);
+      console.log(`Payment transaction updated for user ${user_id}:`, updatedPaymentTransaction);
 
       return 'Payment Intent Success';
     } catch (error) {
