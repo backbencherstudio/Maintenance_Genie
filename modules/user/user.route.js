@@ -9,9 +9,10 @@ import {
   verifyForgotPasswordOTP,
   updateImage,
   updateUserDetails,
-  changePassword,
   sendMailToAdmin,
-  getMe
+  getMe,
+  updatePassword,
+  authenticateUser
 } from './user.controller.js';
 import { upload } from '../../config/Multer.config.js';
 import { verifyUser } from '../../middlewares/verifyUsers.js';
@@ -40,12 +41,12 @@ router.post('/login', loginUser);
 router.post('/forget_pass', forgotPasswordOTPsend);
 router.post('/checkForgetPassOtp', verifyForgotPasswordOTP);
 router.post('/resetPass', resetPassword);
-router.post('/change-password', verifyUser("USER"), changePassword);
 //update user img
-router.put('/update-image', upload.single('profilePicture'), verifyUser("USER"), updateImage);
-router.put('/update-user-details', verifyUser("USER"), updateUserDetails);
+router.put('/update-image', upload.single('profilePicture'), verifyUser("normal"), updateImage);
+router.put('/update-user-details', verifyUser("normal"), updateUserDetails);
 //support
-router.post('/sende-mail', verifyUser("USER"), sendMailToAdmin)
+router.post('/sende-mail', verifyUser("normal"), sendMailToAdmin)
 //get me 
-router.get('/get-me', verifyUser("USER"), getMe);
+router.get('/get-me', authenticateUser ,getMe);
+router.put('/updatePass', updatePassword )
 export default router;

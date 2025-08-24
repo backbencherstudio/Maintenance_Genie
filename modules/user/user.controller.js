@@ -1,23 +1,21 @@
 import dotenv from "dotenv";
 import validator from 'validator';
 import bcrypt from "bcryptjs";
-import { upload } from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
-import multer from 'multer';
 import { PrismaClient } from "@prisma/client";
 import { generateOTP, receiveEmails, sendForgotPasswordOTP, sendRegistrationOTPEmail } from "../../utils/mailService.js";
-import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import pkg from "jsonwebtoken";
-import cookieParser from 'cookie-parser';
-import { token } from "morgan";
-import { type } from "os";
+
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
 
 
 const prisma = new PrismaClient();
-const { sign, verify } = pkg;
 dotenv.config();
 const { isEmail } = validator;
 const __filename = fileURLToPath(import.meta.url);
@@ -60,6 +58,11 @@ export const registerUserStep1 = async (req, res) => {
         });
 
         sendRegistrationOTPEmail(email, otp);
+
+        
+
+      
+
 
         return res.status(200).json({
           message: "OTP expired. A new OTP has been sent to your email.",
@@ -189,12 +192,24 @@ export const registerUserStep3 = async (req, res) => {
       return res.status(400).json({ message: "Email is not registered" });
     }
 
+    let stripeCustomer;
+    if (!existingUser.billing_id) {
+      stripeCustomer = await stripe.customers.create({
+        email,
+        name,
+        metadata: { app_user_id: existingUser.id },
+      });
+
+      console.log("Stripe customer created:", stripeCustomer.id);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { email },
       data: {
         name,
-        email,
         password: hashedPassword,
+        billing_id: stripeCustomer ? stripeCustomer.id : existingUser.billing_id,
+        customer_id: stripeCustomer ? stripeCustomer.id : existingUser.customer_id,
       },
     });
 
@@ -243,11 +258,11 @@ export const loginUser = async (req, res) => {
     }
 
 
-    if (user.type == 'ADMIN') {
-      return res.status(403).json({
-        message: 'ADMIN YOU MUST LOG IN FROM ADMIN PANEL',
-      });
-    }
+    // if (user.type == 'admin') {
+    //   return res.status(403).json({
+    //     message: 'ADMIN YOU MUST LOG IN FROM ADMIN PANEL',
+    //   });
+    // }
 
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -363,6 +378,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     const existingTempUser = await prisma.temp.findUnique({
       where: { email },
+      select:{otp:true , email:true}
     });
 
     if (!existingTempUser) {
@@ -374,7 +390,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
         success: false,
         message: "OTP expired. Please request a new OTP.",
         shouldResendOtp: true,
-        ucodeId: existingTempUser.id,
+        email: existingTempUser.email,
       });
     }
 
@@ -387,15 +403,14 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     const jwtToken = jwt.sign(
       {
-        userId: existingTempUser.id,
         email: existingTempUser.email,
       },
-      process.env.JWT_SECRET,
-      { expiresIn: '10d' }
+      process.env.JWT_SECRET_FORGET,
+      { expiresIn: '1d' }
     );
 
     await prisma.temp.delete({
-      where: { id: existingTempUser.id },
+      where: { email: existingTempUser.email },
     });
 
     return res.status(200).json({
@@ -410,57 +425,58 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 };
 // Reset password
 export const resetPassword = async (req, res) => {
-  try {
-    const { newPassword } = req.body;
+  const { newPassword } = req.body;
 
-
-    if (!newPassword || newPassword.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
-    }
-
-    const token = req.headers['authorization']?.split(' ')[1];
-
-    if (!token) {
-      return res.status(400).json({ message: 'Authorization token is required' });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-      return res.status(401).json({ message: 'Invalid or expired token' });
-    }
-
-    const { email } = decoded;
-
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    const updatedUser = await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Password reset successfully',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-      },
-    });
-  } catch (error) {
-    console.error('Error in resetPassword:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ message: "Password must be at least 8 characters long" });
   }
+
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(400).json({ message: "Authorization token is required" });
+  }
+
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET_FORGET);
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+
+  const { email } = decoded;
+
+
+  console.log(email);
+  
+
+
+  const user = await prisma.user.findUnique({
+    where: { email: email },
+  });
+
+
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const isOldPasswordCorrect = await bcrypt.compare(newPassword, user.password);
+  if (isOldPasswordCorrect) {
+    return res.status(400).json({ message: "New password cannot be the same as the old password" });
+  }
+
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { email: email },
+    data: { password: hashedPassword },
+  });
+
+  
+
+  return res.status(200).json({ message: "Password reset successfully" });
 };
 // Check if user is authenticated
 export const authenticateUser = (req, res, next) => {
@@ -473,7 +489,7 @@ export const authenticateUser = (req, res, next) => {
     if (err) {
       return res.status(403).json({ message: 'Invalid token' });
     }
-    req.user = decoded;  // Add user data to req.user
+    req.user = decoded;
     next();
   });
 };
@@ -574,54 +590,6 @@ export const updateUserDetails = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
-//change password
-export const changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(400).json({ message: "User not authenticated" });
-    }
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: "Current and new passwords are required" });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId, type: 'USER' },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return res.status(401).json({ message: "Current password is incorrect" });
-    }
-
-    const hashedNewPassword = await hashPassword(newPassword);
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Password changed successfully",
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-      },
-    });
-  } catch (error) {
-    console.error('Error changing password:', error);
-    return res.status(500).json({ message: "Internal Server Error", error: error.message });
-  }
-};
 //send mail to admin
 export const sendMailToAdmin = async (req, res) => {
   try {
@@ -693,8 +661,14 @@ export const getMe = async (req, res) => {
         name: true,
         email: true,
         avatar: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
+        updated_at: true,
+        address: true,
+        role: true,
+        type: true,
+        status: true,
+        billing_id: true,
+
       },
     });
 
@@ -702,7 +676,7 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const imageUrl = user.avatar ? `http://localhost:8080/uploads/${user.avatar}` : null;
+    const imageUrl = user.avatar ? `http://localhost:8070/uploads/${user.avatar}` : null;
 
     return res.status(200).json({
       success: true,
@@ -714,3 +688,48 @@ export const getMe = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+// Update password
+export const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new passwords are required" });
+    }
+
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId, type: 'USER' },
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+    const hashedNewPassword = await hashPassword(newPassword);
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+      },
+    });
+  }
+  catch (error) {
+    console.error('Error updating password:', error);
+    return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+}
