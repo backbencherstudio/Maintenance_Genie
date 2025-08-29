@@ -260,7 +260,7 @@ model Tasks {
   status        Task_Status @default(Due)
   last_date     DateTime?
   maintenance_history String[]
-  shop_suggestions     String[]
+  shop_suggestions     Json?
 
   @@index([item_id])               
   @@index([user_id])             

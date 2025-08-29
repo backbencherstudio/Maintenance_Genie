@@ -7,6 +7,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pkg from "jsonwebtoken";
 import axios from "axios";
+import sharp from "sharp";
+import Tesseract from "tesseract.js";
 
 dotenv.config();
 
@@ -18,7 +20,6 @@ const __dirname = path.dirname(__filename);
 
 const generateItemData = async (item) => {
   try {
-    // Ensure correct formatting of the prompt to avoid issues with special characters.
     const serviceIntervalPrompt = `
       Based on the following item details, generate recommended service intervals:
       - Category: ${item.category || 'Unspecified'}
@@ -27,6 +28,10 @@ const generateItemData = async (item) => {
       - Total Mileage: ${item.total_mileage}
       - Purchase Date: ${item.purchase_date}
       Please provide a list of recommended service intervals (e.g., every X miles or every Y months).
+
+      if its not a vehicle, provide general maintenance intervals.
+      Make the intervals specific to the brand and model where possible.
+      Respond in a concise bullet-point format.
     `;
 
     const forumSuggestionPrompt = `
@@ -35,35 +40,35 @@ const generateItemData = async (item) => {
       - Brand: ${item.brand}
       - Model: ${item.model}
       Please suggest 3-5 forum suggestions for discussions related to this item.
+      check the country specific forums as well.
+      Respond in a concise bullet-point format.
+      If no relevant forums are found, respond with "No forums found".
     `;
 
-    // Request for service intervals
     const serviceIntervalResponse = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo", // Make sure valid model is used
+        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo", 
         messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: serviceIntervalPrompt }],
-        max_tokens: 150,
+        max_tokens: 250,
       },
       {
         headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
       }
     );
 
-    // Request for forum suggestions
     const forumSuggestionResponse = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo", // Make sure valid model is used
+        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo", 
         messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: forumSuggestionPrompt }],
-        max_tokens: 150,
+        max_tokens: 250,
       },
       {
         headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
       }
     );
 
-    // If forum suggestions are available
     let forumSuggestions = [];
     if (forumSuggestionResponse.data && forumSuggestionResponse.data.choices && forumSuggestionResponse.data.choices[0].message) {
       forumSuggestions = forumSuggestionResponse.data.choices[0].message.content.split("\n");
@@ -74,10 +79,11 @@ const generateItemData = async (item) => {
       forum_suggestions: forumSuggestions,
     };
   } catch (error) {
-    console.error("Error generating item data with Mistral:", error);
+    console.error("Error generating item data with openAi:", error);
     return null;
   }
 };
+
 export const addItem = async (req, res) => {
   try {
     const {
@@ -113,9 +119,9 @@ export const addItem = async (req, res) => {
     }
 
     const isSubscribed = user.is_subscribed;
+    const role = req.user?.role;
     console.log("User subscription status:", isSubscribed);
 
-    // Create the new item in the database
     const newItem = await prisma.item.create({
       data: {
         name,
@@ -133,11 +139,11 @@ export const addItem = async (req, res) => {
       },
     });
 
-    console.log("New Item:", newItem);
+    //console.log("New Item:", newItem);
 
     let generatedData;
 
-    if (isSubscribed === true) {
+    if (isSubscribed === true &&  role === 'premium') {
       generatedData = await generateItemData(req.body);
     } else {
       const serviceIntervalPrompt = `
@@ -149,13 +155,12 @@ export const addItem = async (req, res) => {
         - Purchase Date: ${purchase_date}
         Please provide a list of recommended service intervals (e.g., every X miles or every Y months).
       `;
-
       const serviceIntervalResponse = await axios.post(
         "https://api.openai.com/v1/chat/completions",
         {
           model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo",
           messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: serviceIntervalPrompt }],
-          max_tokens: 150,
+          max_tokens: 200,
         },
         {
           headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
@@ -172,7 +177,7 @@ export const addItem = async (req, res) => {
         where: { id: newItem.id },
         data: {
           service_intervals: generatedData.service_intervals,
-          forum_suggestions: generatedData.forum_suggestions || [], // Ensure forum_suggestions is always an array
+          forum_suggestions: generatedData.forum_suggestions || [], 
         },
       });
 
@@ -190,7 +195,6 @@ export const addItem = async (req, res) => {
   } catch (error) {
     console.error("Error adding item:", error);
 
-    // If there was a file upload error, delete the uploaded file
     if (req.file) {
       fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
     }
@@ -198,18 +202,31 @@ export const addItem = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+
 export const generateQuestions = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const item = await prisma.item.findUnique({ where: { id } });
+    const item = await prisma.item.findUnique({ where: { id } , 
+    select: {
+      category: true,
+      brand: true,
+      model: true,
+      last_service_name: true,
+      purchase_date: true,
+      description: true
+      
+    }});
     if (!item) return res.status(404).json({ message: "Item not found" });
+
 
     const prompt = `
       Based on the following item details, generate 5 yes/no diagnostic questions about possible issues:
       - Category: ${item.category}
       - Brand: ${item.brand}
       - Model: ${item.model}
+      - Purchase Date: ${item.purchase_date}
+      - Description: ${item.description || "No description provided"}
       - Last service: ${item.last_service_name || "Not available"}
       Please respond in JSON array format: ["Question 1?", "Question 2?", ...]
     `;
@@ -217,7 +234,7 @@ export const generateQuestions = async (req, res) => {
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo",
+        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-4o",
         messages: [{ role: "user", content: prompt }],
       },
       {
@@ -227,7 +244,6 @@ export const generateQuestions = async (req, res) => {
       }
     );
 
-    // 🧹 Clean GPT response if wrapped in markdown
     let raw = response.data.choices[0].message.content.trim();
 
     if (raw.startsWith("```")) {
@@ -238,13 +254,13 @@ export const generateQuestions = async (req, res) => {
     try {
       questions = JSON.parse(raw);
     } catch (err) {
-      console.error("❌ Failed to parse questions JSON from GPT:", raw);
+      console.error("Failed to parse questions JSON from GPT:", raw);
       return res.status(500).json({ message: "Invalid JSON response from AI" });
     }
 
     return res.json({ success: true, questions });
   } catch (error) {
-    console.error("🔥 Error generating questions:", error);
+    console.error("Error generating questions:", error);
     return res.status(500).json({ message: "Failed to generate questions" });
   }
 };
@@ -266,22 +282,53 @@ export const generateTasks = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: item.user_id },
-      select: { is_subscribed: true },
+      select: { is_subscribed: true, role: true },
     });
 
-      if (!user.is_subscribed) {
-        return res.json({
-          success: false,
-          message: "Oops, need subscription to create tasks",
-        });
-      }
+    if (!user.is_subscribed && user.role !== 'premium') {
+      return res.json({
+        success: false,
+        message: "Oops, need subscription to create tasks",
+      });
+    }
 
     const prompt = `
       The user answered the following diagnostic questions with YES/NO:
       ${answers.join(", ")}
-      Should any maintenance tasks be created for this ${item.category} (${item.brand} ${item.model})?
-      If yes, generate up to 2 tasks with names, descriptions, and due dates.
-      Respond in JSON format: [{ "task_name": "...", "description": "...", "due_in_days": 30 }]
+
+      Based on this, should any maintenance tasks be created for this ${item.category} (${item.brand} ${item.model})?
+
+      If yes, generate up to 3 tasks. Each task should include:
+      - task_name
+      - description
+      - due_in_days
+      - shop_suggestions (recommended repair shops nearby)
+
+      Each shop_suggestion should include:
+      - name
+      - rating (out of 5)
+      - total_reviews
+      - contact (masked or fake is fine)
+      - google_map_url (mock or real-looking)
+
+      Respond ONLY in raw JSON format like this:
+      [
+        {
+          "task_name": "Task Name",
+          "description": "Task description here",
+          "due_in_days": 30,
+          "shop_suggestions": [
+            {
+              "name": "Shop Name",
+              "rating": 4.6,
+              "total_reviews": 120,
+              "contact": "xxxxxxxxxxx",
+              "google_map_url": "https://maps.google.com/?q=Shop+Name"
+            }
+          ]
+        }
+      ]
+
       If no tasks are needed, respond with [].
     `;
 
@@ -316,8 +363,6 @@ export const generateTasks = async (req, res) => {
       return res.json({ success: true, message: "No tasks needed" });
     }
 
-  
-
     const createdTasks = await Promise.all(
       tasks.map((t) =>
         prisma.tasks.create({
@@ -325,11 +370,10 @@ export const generateTasks = async (req, res) => {
             item_name: item.name,
             upcoming_task: t.task_name,
             description: t.description,
-            last_date: new Date(
-              Date.now() + t.due_in_days * 24 * 60 * 60 * 1000
-            ),
+            last_date: new Date(Date.now() + t.due_in_days * 24 * 60 * 60 * 1000),
             item: { connect: { id: item.id } },
             user: { connect: { id: item.user_id } },
+            shop_suggestions: t.shop_suggestions || [],
           },
         })
       )
@@ -342,10 +386,137 @@ export const generateTasks = async (req, res) => {
   }
 };
 
+export const uploadReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
 
+    const task = await prisma.tasks.findUnique({ where: { id } });
 
-//GET ALL ITEMS
+    if (!task) {
+      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const localPath = path.join(__dirname, "../../uploads", req.file.filename);
+    const resizedImageBuffer = await sharp(localPath)
+      .resize({ width: 1000 })
+      .toBuffer();
+
+    const base64Image = `data:image/png;base64,${resizedImageBuffer.toString("base64")}`;
+
+    const ocrResult = await Tesseract.recognize(resizedImageBuffer, "eng");
+    const extractedText = ocrResult.data.text.trim();
+
+   // console.log("OCR Extracted Text:", extractedText.slice(0, 500));
+
+    const prompt = `
+You are looking at a scanned maintenance or service receipt. Here's the extracted text:
+
+"""
+${extractedText}
+"""
+
+From this, identify any services or maintenance tasks that were performed — even if it's just a car wash.
+
+Please return up to 5 services in this format:
+
+{
+  "maintenance_history": [
+    "Service Name: mm/dd/yyyy"
+  ]
+}
+
+If a date is not present, use "unknown date".  
+If you can't find any services, respond with: { "maintenance_history": [] }
+`;
+
+    const gptResponse = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: base64Image,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 1000,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    let raw = gptResponse.data.choices[0].message.content.trim();
+
+    if (raw.startsWith("```")) {
+      raw = raw.replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      console.error("JSON parse failed:", raw);
+      return res.status(422).json({
+        message: "Invalid JSON returned from GPT. Please reupload a clearer image.",
+      });
+    }
+
+    const history = parsed.maintenance_history || [];
+
+    if (!history.length) {
+      return res.status(400).json({
+        message: "Could not extract readable data. Please try another receipt.",
+      });
+    }
+
+    const updatedTask = await prisma.tasks.update({
+      where: { id },
+      data: {
+        maintenance_history: history,
+        receipt_url: req.file.filename,
+        status: "Completed",
+        last_date: new Date(),
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: "Receipt uploaded and maintenance history updated.",
+      task: updatedTask,
+      receiptUrl: `http://localhost:8070/uploads/${req.file.filename}`,
+    });
+
+  } catch (error) {
+    console.error("Error in uploadReceipt:", error);
+
+    if (req.file) {
+      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
+    }
+
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 export const getAllItems = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -378,7 +549,6 @@ export const getAllItems = async (req, res) => {
   }
 };
 
-//GET ITEM BY ID
 export const getItemById = async (req, res) => {
   try {
     const { id } = req.params;
