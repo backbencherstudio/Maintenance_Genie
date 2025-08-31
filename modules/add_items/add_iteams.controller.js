@@ -83,7 +83,6 @@ const generateItemData = async (item) => {
     return null;
   }
 };
-
 export const addItem = async (req, res) => {
   try {
     const {
@@ -202,7 +201,6 @@ export const addItem = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
-
 export const generateQuestions = async (req, res) => {
   try {
     const { id } = req.params;
@@ -264,7 +262,6 @@ export const generateQuestions = async (req, res) => {
     return res.status(500).json({ message: "Failed to generate questions" });
   }
 };
-
 export const generateTasks = async (req, res) => {
   try {
     const { id: taskId } = req.params;
@@ -385,7 +382,6 @@ export const generateTasks = async (req, res) => {
     return res.status(500).json({ message: "Failed to generate tasks" });
   }
 };
-
 export const uploadReceipt = async (req, res) => {
   try {
     const { id } = req.params;
@@ -516,7 +512,6 @@ If you can't find any services, respond with: { "maintenance_history": [] }
     });
   }
 };
-
 export const getAllItems = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -548,7 +543,6 @@ export const getAllItems = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
-
 export const getItemById = async (req, res) => {
   try {
     const { id } = req.params;
