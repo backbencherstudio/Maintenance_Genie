@@ -51,6 +51,7 @@ const generateItemData = async (item) => {
         model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo", 
         messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: serviceIntervalPrompt }],
         max_tokens: 250,
+        temperature: 0.7,
       },
       {
         headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
@@ -582,4 +583,48 @@ export const getItemById = async (req, res) => {
     console.error('Error retrieving item:', error);
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
+};
+
+export const getAllTasksForAnItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ message: "Item ID is required" });
+    }
+    const tasks = await prisma.tasks.findMany({
+      where: { item_id: id },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Tasks retrieved successfully",
+      tasks,
+    });
+  } catch (error) {
+    console.error('Error retrieving tasks:', error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+export const getAlltasksForAuser = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    const tasks = await prisma.tasks.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Tasks retrieved successfully",
+      tasks,
+    });
+  }
+  catch (error) {
+    console.error('Error retrieving tasks:', error);
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  } 
 };

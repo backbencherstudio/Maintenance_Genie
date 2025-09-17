@@ -495,7 +495,7 @@ export const authenticateUser = (req, res, next) => {
 };
 //update user image
 export const updateImage = async (req, res) => {
-  console.log("Image upload: ", req.file);
+ // console.log("Image upload: ", req.file);
 
   try {
     const id = req.user?.userId;

@@ -42,8 +42,8 @@ router.post('/forget_pass', forgotPasswordOTPsend);
 router.post('/checkForgetPassOtp', verifyForgotPasswordOTP);
 router.post('/resetPass', resetPassword);
 //update user img
-router.put('/update-image', upload.single('profilePicture'), verifyUser("normal"), updateImage);
-router.put('/update-user-details', verifyUser("normal"), updateUserDetails);
+router.put('/update-image', upload.single('profilePicture'), verifyUser("normal", "premium"), updateImage);
+router.put('/update-user-details', verifyUser("normal", "premium"), updateUserDetails);
 //support
 router.post('/sende-mail', verifyUser("normal"), sendMailToAdmin)
 //get me 
