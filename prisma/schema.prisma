@@ -211,34 +211,28 @@ model Item {
   created_at DateTime @default(now())
 
   user_id String
-  user    User   @relation(fields: [user_id], references: [id])
-
-  issues  String[]
+  user    User    @relation(fields: [user_id], references: [id])
   task_id String?
 
   name              String
-  description       String?
   brand             String?
   model             String?
-  vin               String?
   purchase_date     DateTime?
   total_mileage     Float?
-  last_service_date DateTime?
-  last_service_name String?
+  year_of_the_model String?
   image_url         String?
-  price             String?
-  image             String?
   category          Category? @default(Custom)
   service_intervals String[]
   forum_suggestions String[]
 
   Tasks Tasks[]
+
+  Questions Questions[]
 }
 
 enum Task_Status {
   Due
   Completed
-  Overdue
 }
 
 model Tasks {
@@ -246,10 +240,10 @@ model Tasks {
   created_at DateTime @default(now())
 
   item_id String
-  item    Item   @relation(fields: [item_id], references: [id])
+  item    Item   @relation(fields: [item_id], references: [id], onDelete: Cascade)
 
   user_id String
-  user    User   @relation(fields: [user_id], references: [id])
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   upcoming_task          String?
   item_name              String
@@ -311,4 +305,14 @@ model General_Settings {
   contact_email String?
   contact_phone String?
   timezone      String?
+}
+
+model Questions {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  question   String[]
+  itemId     String   @unique
+  item       Item     @relation(fields: [itemId], references: [id])
+
+  @@map("questions ")
 }

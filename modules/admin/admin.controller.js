@@ -18,6 +18,7 @@ import { token } from "morgan";
 import { type } from "os";
 import { generateSubscriptionHtml, generateUserListHtml } from "../../constants/email_message.js";
 import { create } from "domain";
+import { login } from "../../validations/joi.validations.js";
 
 const prisma = new PrismaClient();
 const { sign, verify } = pkg;
@@ -30,7 +31,7 @@ const __dirname = path.dirname(__filename);
 //admin login
 export const loginAdmin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = login.validate(req.body);
     const missingField = ['email', 'password'].find(field => !req.body[field]);
     if (missingField) {
       res.status(400).json({

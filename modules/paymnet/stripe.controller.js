@@ -20,7 +20,7 @@ const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 export const createPaymentIntent = async (req, res) => {
   try {
     const { paymentMethodId, service_id } = req.body;
-
+//   "paymentMethodId": "pm_card_visa",
     if (!paymentMethodId || !service_id) {
       return res.status(400).json({ error: 'Missing payment method or service ID' });
     }

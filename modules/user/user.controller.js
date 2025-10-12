@@ -9,6 +9,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import Stripe from 'stripe';
+import { change_password, forgot_password_otp_send, login, register_step_1_email, register_step_3, reset_password, update_user_details, verify_otp } from "../../validations/joi.validations.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20',
@@ -29,7 +30,12 @@ const hashPassword = async (password) => {
 // Register a new user
 export const registerUserStep1 = async (req, res) => {
   try {
-    const { email } = req.body;
+
+    const { value, error } = register_step_1_email.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { email } = value;
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -59,9 +65,9 @@ export const registerUserStep1 = async (req, res) => {
 
         sendRegistrationOTPEmail(email, otp);
 
-        
 
-      
+
+
 
 
         return res.status(200).json({
@@ -95,7 +101,13 @@ export const registerUserStep1 = async (req, res) => {
 };
 export const verifyOTP = async (req, res) => {
   try {
-    const { otp, email } = req.body;
+    const { value, error } = verify_otp.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { otp, email } = value;
 
     if (!otp || !email) {
       return res.status(400).json({ message: "OTP and email are required" });
@@ -158,7 +170,7 @@ export const verifyOTP = async (req, res) => {
 };
 export const registerUserStep3 = async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { name, password } = register_step_3.validate(req.body);
     const token = req.headers['authorization']?.split(' ')[1];
 
     if (!token) {
@@ -225,7 +237,12 @@ export const registerUserStep3 = async (req, res) => {
 //Login
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { error, value } = login.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { email, password } = value;
 
 
     const missingField = ['email', 'password'].find(field => !req.body[field]);
@@ -239,8 +256,6 @@ export const loginUser = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: {
         email,
-        type: 'USER',
-        status: 'active',
       },
     });
 
@@ -303,7 +318,7 @@ export const loginUser = async (req, res) => {
 // Forgot password OTP send
 export const forgotPasswordOTPsend = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = forgot_password_otp_send(req.body);
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
@@ -370,7 +385,7 @@ export const forgotPasswordOTPsend = async (req, res) => {
 // Match forgot password OTP
 export const verifyForgotPasswordOTP = async (req, res) => {
   try {
-    const { otp, email } = req.body;
+    const { otp, email } = verify_otp(req.body);
 
     if (!otp || !email) {
       return res.status(400).json({ message: "OTP and email are required" });
@@ -378,7 +393,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     const existingTempUser = await prisma.temp.findUnique({
       where: { email },
-      select:{otp:true , email:true}
+      select: { otp: true, email: true }
     });
 
     if (!existingTempUser) {
@@ -425,11 +440,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 };
 // Reset password
 export const resetPassword = async (req, res) => {
-  const { newPassword } = req.body;
-
-  if (!newPassword || newPassword.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters long" });
-  }
+  const { newPassword } = reset_password(req.body);
 
   const token = req.headers.authorization?.split(" ")[1];
 
@@ -449,7 +460,7 @@ export const resetPassword = async (req, res) => {
 
 
   console.log(email);
-  
+
 
 
   const user = await prisma.user.findUnique({
@@ -474,7 +485,7 @@ export const resetPassword = async (req, res) => {
     data: { password: hashedPassword },
   });
 
-  
+
 
   return res.status(200).json({ message: "Password reset successfully" });
 };
@@ -495,7 +506,7 @@ export const authenticateUser = (req, res, next) => {
 };
 //update user image
 export const updateImage = async (req, res) => {
- // console.log("Image upload: ", req.file);
+  // console.log("Image upload: ", req.file);
 
   try {
     const id = req.user?.userId;
@@ -552,7 +563,7 @@ export const updateImage = async (req, res) => {
 //update user details
 export const updateUserDetails = async (req, res) => {
   try {
-    const { name, email, address } = req.body;
+    const { name, email, address } = update_user_details.validate(req.body);
     const id = req.user?.userId;
 
 
@@ -691,7 +702,7 @@ export const getMe = async (req, res) => {
 // Update password
 export const updatePassword = async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword } = change_password(req.body);
     const userId = req.user?.userId;
 
     if (!userId) {
