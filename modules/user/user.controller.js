@@ -521,7 +521,7 @@ export const updateImage = async (req, res) => {
     }
 
     const existingUser = await prisma.user.findUnique({
-      where: { id: id },
+      where: { id: id , type: 'USER' },
     });
 
     if (!existingUser) {
@@ -575,9 +575,13 @@ export const updateUserDetails = async (req, res) => {
     }
 
     const id = req.user?.userId;
-
-
-    if (!id) {
+    const existUser = await prisma.user.findUnique({
+      where: { id: id , type: 'USER' },
+    });
+    if (!existUser) {
+      return res.status(400).json({ message: "User not exist" });
+    }
+    if(!id){
       return res.status(400).json({ message: "User not authenticated" });
     }
 
@@ -686,7 +690,7 @@ export const getMe = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId , type: 'USER' },
       select: {
         id: true,
         name: true,
@@ -726,33 +730,33 @@ export const updatePassword = async (req, res) => {
     if(error){
       return res.status(400).json({ message: error.details[0].message });
     }
-    const { currentPassword, newPassword } = value;
+    const { oldPassword, newPassword } = value;
     const userId = req.user?.userId;
     
 
     if (!userId) {
       return res.status(400).json({ message: "User not authenticated" });
     }
-    if (!currentPassword || !newPassword) {
+    if (!oldPassword || !newPassword) {
       return res.status(400).json({ message: "Current and new passwords are required" });
     }
 
 
     const user = await prisma.user.findUnique({
-      where: { id: userId},
+      where: { id: userId , type: 'USER' },
     });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return res.status(401).json({ message: "Current password is incorrect" });
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      return res.status(401).json({ message: "Old password is incorrect" });
     }
     const hashedNewPassword = await hashPassword(newPassword);
 
-    if(isCurrentPasswordValid === newPassword){
-      return res.satus(401).json({message:"current and new password cannot be same"})
+    if(isOldPasswordValid === newPassword){
+      return res.status(401).json({message:"old and new password cannot be same"})
     }
 
     const updatedUser = await prisma.user.update({

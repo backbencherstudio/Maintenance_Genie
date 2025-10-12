@@ -11,7 +11,8 @@ import { fileURLToPath } from "url";
 import pkg from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import { generateSubscriptionHtml, generateUserListHtml } from "../../constants/email_message.js";
-import { login } from "../../validations/joi.validations.js";
+import { change_password, login, update_user_details } from "../../validations/joi.validations.js";
+import e from "express";
 
 const prisma = new PrismaClient();
 const { sign, verify } = pkg;
@@ -840,7 +841,13 @@ export const getMe = async (req, res) => {
 //change admin password
 export const changeAdminPassword = async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    const {value, error} = change_password.validate(req.body);
+    console.log(value);
+    
+    if(error){
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { oldPassword, newPassword } = value;
     const userId = req.user.userId;
     console.log('User ID:', userId);
 
@@ -951,7 +958,12 @@ export const updateImage = async (req, res) => {
 //change admin details
 export const updateAdminDetails = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const {value, error} = update_user_details.validate(req.body);
+    if(error){
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { name, email, address } = value;
     const id = req.user?.userId;
 
     if (!id) {
@@ -966,6 +978,7 @@ export const updateAdminDetails = async (req, res) => {
 
     if (name) dataToUpdate.name = name;
     if (email) dataToUpdate.email = email;
+    if (address) dataToUpdate.address = address;
 
     if (Object.keys(dataToUpdate).length === 0) {
       return res.status(400).json({ message: "No valid fields provided for update" });
@@ -1024,12 +1037,12 @@ export const getAllAdmins = async (req, res) => {
 export const deleteAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-
+     
     if (!id) {
       return res.status(400).json({ message: "Admin ID is required" });
     }
 
-    if (id === 'undefined' ? req.user?.userId : id) {
+    if (id === 'undefined' || req.user?.userId === id) {
       return res.status(400).json({ message: "  you cannot delete yourself" });
     }
 
