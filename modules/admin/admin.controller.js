@@ -2,22 +2,15 @@ import dotenv from "dotenv";
 import validator from 'validator';
 import puppeteer from 'puppeteer';
 import bcrypt from "bcryptjs";
-import { upload } from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
-import multer from 'multer';
 import { PrismaClient } from "@prisma/client";
 import { sendAdminInvitationEmail } from "../../utils/mailService.js";
-import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pkg from "jsonwebtoken";
 import { randomBytes } from "crypto";
-import cookieParser from 'cookie-parser';
-import { token } from "morgan";
-import { type } from "os";
 import { generateSubscriptionHtml, generateUserListHtml } from "../../constants/email_message.js";
-import { create } from "domain";
 import { login } from "../../validations/joi.validations.js";
 
 const prisma = new PrismaClient();
@@ -31,7 +24,8 @@ const __dirname = path.dirname(__filename);
 //admin login
 export const loginAdmin = async (req, res) => {
   try {
-    const { email, password } = login.validate(req.body);
+    const {value, error} = login.validate(req.body);
+    const { email, password } = value;
     const missingField = ['email', 'password'].find(field => !req.body[field]);
     if (missingField) {
       res.status(400).json({
@@ -814,15 +808,16 @@ export const getMe = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId , type:"ADMIN"},
       select: {
         id: true,
         name: true,
         email: true,
-        avatar: true,
-        created_at: true,
-        type: true,
+        address: true,
         role: true,
+        type: true,
+        status: true,
+        avatar:true
       },
     });
 
@@ -830,13 +825,15 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const imageUrl = user.avatar ? `http://localhost:8070/uploads/${user.avatar}` : null;
+
     return res.status(200).json({
       success: true,
-      message: "User retrieved successfully",
-      data: user,
+      message: "User details retrieved successfully",
+      data: { ...user, imageUrl },
     });
   } catch (error) {
-    console.error('Error retrieving user:', error);
+    console.error('Error retrieving user details:', error);
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };

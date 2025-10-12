@@ -9,7 +9,16 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import Stripe from 'stripe';
-import { change_password, forgot_password_otp_send, login, register_step_1_email, register_step_3, reset_password, update_user_details, verify_otp } from "../../validations/joi.validations.js";
+import { 
+  change_password,
+  forgot_password_otp_send,
+  login,
+  register_step_1_email,
+  register_step_3,
+  reset_password,
+  update_user_details,
+  verify_otp
+} from "../../validations/joi.validations.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20',
@@ -258,6 +267,13 @@ export const loginUser = async (req, res) => {
         email,
       },
     });
+    
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not exists, please register and then try to log in',
+      });
+    }
+
 
     if (user.status === 'suspended') {
       return res.status(403).json({
@@ -265,19 +281,6 @@ export const loginUser = async (req, res) => {
       })
     }
 
-
-    if (!user) {
-      return res.status(404).json({
-        message: 'User not found',
-      });
-    }
-
-
-    // if (user.type == 'admin') {
-    //   return res.status(403).json({
-    //     message: 'ADMIN YOU MUST LOG IN FROM ADMIN PANEL',
-    //   });
-    // }
 
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -440,7 +443,8 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 };
 // Reset password
 export const resetPassword = async (req, res) => {
-  const { newPassword } = reset_password(req.body);
+  const {value , error} = reset_password.validate(req.body);
+  const { newPassword } = value;
 
   const token = req.headers.authorization?.split(" ")[1];
 
@@ -563,7 +567,13 @@ export const updateImage = async (req, res) => {
 //update user details
 export const updateUserDetails = async (req, res) => {
   try {
-    const { name, email, address } = update_user_details.validate(req.body);
+    const {value, error} = update_user_details.validate(req.body);
+    const { name, email, address } = value;
+
+    if(error){
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
     const id = req.user?.userId;
 
 
@@ -580,6 +590,16 @@ export const updateUserDetails = async (req, res) => {
     if (Object.keys(dataToUpdate).length === 0) {
       return res.status(400).json({ message: "No valid fields provided for update" });
     }
+
+  if(email){
+        const checkExistingEmail = await prisma.user.findUnique({
+      where:{email:email}
+    })
+
+    if(checkExistingEmail){
+      res.status(400).json({ message: "Email already exists" });
+    }
+  }
 
     const user = await prisma.user.update({
       where: { id: id },
@@ -702,8 +722,13 @@ export const getMe = async (req, res) => {
 // Update password
 export const updatePassword = async (req, res) => {
   try {
-    const { currentPassword, newPassword } = change_password(req.body);
+    const {value, error } = change_password.validate(req.body);
+    if(error){
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { currentPassword, newPassword } = value;
     const userId = req.user?.userId;
+    
 
     if (!userId) {
       return res.status(400).json({ message: "User not authenticated" });
@@ -714,7 +739,7 @@ export const updatePassword = async (req, res) => {
 
 
     const user = await prisma.user.findUnique({
-      where: { id: userId, type: 'USER' },
+      where: { id: userId},
     });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -725,6 +750,11 @@ export const updatePassword = async (req, res) => {
       return res.status(401).json({ message: "Current password is incorrect" });
     }
     const hashedNewPassword = await hashPassword(newPassword);
+
+    if(isCurrentPasswordValid === newPassword){
+      return res.satus(401).json({message:"current and new password cannot be same"})
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { password: hashedNewPassword },

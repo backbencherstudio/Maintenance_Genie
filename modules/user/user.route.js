@@ -42,11 +42,11 @@ router.post('/forget_pass', forgotPasswordOTPsend);
 router.post('/checkForgetPassOtp', verifyForgotPasswordOTP);
 router.post('/resetPass', resetPassword);
 //update user img
-router.put('/update-image', upload.single('profilePicture'), verifyUser("normal", "premium"), updateImage);
+router.patch('/update-image', upload.single('profilePicture'), verifyUser("normal", "premium"), updateImage);
 router.put('/update-user-details', verifyUser("normal", "premium"), updateUserDetails);
 //support
 router.post('/sende-mail', verifyUser("normal"), sendMailToAdmin)
 //get me 
 router.get('/get-me', authenticateUser ,getMe);
-router.put('/updatePass', updatePassword )
+router.patch('/updatePass', authenticateUser, updatePassword )
 export default router;
