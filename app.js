@@ -38,8 +38,10 @@ BigInt.prototype.toJSON = function () {
 // Initialize Socket.IO server
 export const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: ["*", "http://192.168.30.102:3000", "http://localhost:5173", "http://localhost:3000", "http://localhost:8080","https://maintenance-genies.vercel.app"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowOrigin: true,
     credentials: true,
   },
 });
@@ -47,24 +49,18 @@ setSocketServer(io);
 
 
 // CORS configuration
-app.use(
-  cors({
-    origin: [
-      "http://192.168.30.102:3000",    
-      "http://localhost:5173",         
-      "http://localhost:3000",         
-      "http://localhost:8080",         
-      "http://127.0.0.1:5500",        
-      "https://f7acfea4e102.ngrok-free.app",
-      "https://maintenance-genie-72uvp6qac-bbsfullstacks-projects.vercel.app/admin",
-      "https://maintenance-genie-bay.vercel.app"
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],  
-    credentials: true,  
-  })
-);
-
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://192.168.30.102:3000",
+    "https://maintenance-genies.vercel.app"
+  ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  credentials: true,
+}));
 
 //cron job to update subscriptions daily  Refresh the counter every day at midnight
 

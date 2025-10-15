@@ -1076,12 +1076,18 @@ export const inviteAdmin = async (req, res) => {
       return res.status(400).json({ message: "Valid email is required" });
     }
 
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email, type: 'ADMIN' },
+    const existingUser = await prisma.user.findFirst({
+      where: { email:email },
+      select:{type:true}
     });
 
-    if (existingAdmin) {
-      return res.status(400).json({ message: "Admin with this email already exists" });
+    if (existingUser && existingUser.type !== 'ADMIN') {
+      
+      await prisma.user.update({
+        where: { email: email },
+        data: { type: 'ADMIN' },
+      });
+      return res.status(400).json({ message: "User is now an Admin" });
     }
 
     const rawPassword = randomBytes(6).toString('base64');
