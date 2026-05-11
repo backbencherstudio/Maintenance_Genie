@@ -2,22 +2,17 @@ import dotenv from "dotenv";
 import validator from 'validator';
 import puppeteer from 'puppeteer';
 import bcrypt from "bcryptjs";
-import { upload } from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
-import multer from 'multer';
 import { PrismaClient } from "@prisma/client";
 import { sendAdminInvitationEmail } from "../../utils/mailService.js";
-import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pkg from "jsonwebtoken";
 import { randomBytes } from "crypto";
-import cookieParser from 'cookie-parser';
-import { token } from "morgan";
-import { type } from "os";
 import { generateSubscriptionHtml, generateUserListHtml } from "../../constants/email_message.js";
-import { create } from "domain";
+import { change_password, login, update_user_details } from "../../validations/joi.validations.js";
+import e from "express";
 
 const prisma = new PrismaClient();
 const { sign, verify } = pkg;
@@ -30,7 +25,8 @@ const __dirname = path.dirname(__filename);
 //admin login
 export const loginAdmin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const {value, error} = login.validate(req.body);
+    const { email, password } = value;
     const missingField = ['email', 'password'].find(field => !req.body[field]);
     if (missingField) {
       res.status(400).json({
@@ -813,15 +809,16 @@ export const getMe = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId , type:"ADMIN"},
       select: {
         id: true,
         name: true,
         email: true,
-        avatar: true,
-        created_at: true,
-        type: true,
+        address: true,
         role: true,
+        type: true,
+        status: true,
+        avatar:true
       },
     });
 
@@ -829,20 +826,28 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const imageUrl = user.avatar ? `http://localhost:8070/uploads/${user.avatar}` : null;
+
     return res.status(200).json({
       success: true,
-      message: "User retrieved successfully",
-      data: user,
+      message: "User details retrieved successfully",
+      data: { ...user, imageUrl },
     });
   } catch (error) {
-    console.error('Error retrieving user:', error);
+    console.error('Error retrieving user details:', error);
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
 //change admin password
 export const changeAdminPassword = async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    const {value, error} = change_password.validate(req.body);
+    console.log(value);
+    
+    if(error){
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { oldPassword, newPassword } = value;
     const userId = req.user.userId;
     console.log('User ID:', userId);
 
@@ -953,7 +958,12 @@ export const updateImage = async (req, res) => {
 //change admin details
 export const updateAdminDetails = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const {value, error} = update_user_details.validate(req.body);
+    if(error){
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { name, email, address } = value;
     const id = req.user?.userId;
 
     if (!id) {
@@ -968,6 +978,7 @@ export const updateAdminDetails = async (req, res) => {
 
     if (name) dataToUpdate.name = name;
     if (email) dataToUpdate.email = email;
+    if (address) dataToUpdate.address = address;
 
     if (Object.keys(dataToUpdate).length === 0) {
       return res.status(400).json({ message: "No valid fields provided for update" });
@@ -1026,12 +1037,12 @@ export const getAllAdmins = async (req, res) => {
 export const deleteAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-
+     
     if (!id) {
       return res.status(400).json({ message: "Admin ID is required" });
     }
 
-    if (id === 'undefined' ? req.user?.userId : id) {
+    if (id === 'undefined' || req.user?.userId === id) {
       return res.status(400).json({ message: "  you cannot delete yourself" });
     }
 
@@ -1065,12 +1076,18 @@ export const inviteAdmin = async (req, res) => {
       return res.status(400).json({ message: "Valid email is required" });
     }
 
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email, type: 'ADMIN' },
+    const existingUser = await prisma.user.findFirst({
+      where: { email:email },
+      select:{type:true}
     });
 
-    if (existingAdmin) {
-      return res.status(400).json({ message: "Admin with this email already exists" });
+    if (existingUser && existingUser.type !== 'ADMIN') {
+      
+      await prisma.user.update({
+        where: { email: email },
+        data: { type: 'ADMIN' },
+      });
+      return res.status(400).json({ message: "User is now an Admin" });
     }
 
     const rawPassword = randomBytes(6).toString('base64');

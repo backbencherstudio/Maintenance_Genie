@@ -44,7 +44,8 @@ enum Type {
 model User {
   id                    String    @id @default(cuid())
   created_at            DateTime  @default(now())
-  updated_at            DateTime  @default(now())
+  updated_at            DateTime  @default(now()) @updatedAt
+  deleted_at            DateTime?
   email                 String    @unique
   name                  String?
   password              String?
@@ -132,22 +133,30 @@ model UserPaymentMethod {
 model PaymentTransaction {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
   deleted_at DateTime?
-  status     String?   @default("pending")
+  status     String    @default("pending") // "pending" | "requires_action" | "succeeded" | "failed" | "canceled"
 
+  // --- Relations ---
   user_id String?
   user    User?   @relation(fields: [user_id], references: [id])
 
   subscription_id String?
   subscription    Subscription? @relation(fields: [subscription_id], references: [id])
 
-  provider       String?
-  price          Decimal?
-  currency       String?
-  paid_amount    Decimal?
-  paid_currency  String?
-  payment_method String?
+  // --- Stripe / Provider identifiers (🔒 make processing idempotent & auditable) ---
+  provider                   String?
+  provider_payment_intent_id String? @unique
+  provider_charge_id         String?
+  provider_customer_id       String?
+  provider_payment_method_id String?
+
+  // --- Financials ---
+  price          Decimal? // your major-unit price at time of purchase (e.g., 9.99)
+  currency       String? // e.g., "usd"
+  paid_amount    Decimal? // actual captured amount in major units (e.g., 9.99)
+  paid_currency  String? // e.g., "usd"
+  payment_method String? // duplicate of pm id for convenience/audit
 
   @@map("payment_transactions")
 }
@@ -202,45 +211,39 @@ model Item {
   created_at DateTime @default(now())
 
   user_id String
-  user    User   @relation(fields: [user_id], references: [id])
+  user    User    @relation(fields: [user_id], references: [id])
+  task_id String?
 
-  task_id           String?
   name              String
-  description       String?
   brand             String?
   model             String?
-  vin               String?
   purchase_date     DateTime?
   total_mileage     Float?
-  last_service_date DateTime?
-  last_service_name String?
+  year_of_the_model String?
   image_url         String?
-  price             String? // price of the item, can be null if not applicable
-  image             String?
   category          Category? @default(Custom)
   service_intervals String[]
-  forum_suggestions String[] // if subscription is active, this will be used to suggest forums related to the item
+  forum_suggestions String[]
 
   Tasks Tasks[]
 
-  @@map("items")
+  Questions Questions[]
 }
 
 enum Task_Status {
   Due
   Completed
-  Overdue
 }
 
 model Tasks {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
 
-  item_id String @unique
-  item    Item   @relation(fields: [item_id], references: [id])
+  item_id String
+  item    Item   @relation(fields: [item_id], references: [id], onDelete: Cascade)
 
   user_id String
-  user    User   @relation(fields: [user_id], references: [id])
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   upcoming_task          String?
   item_name              String
@@ -249,9 +252,12 @@ model Tasks {
   receipt_url            String?
   status                 Task_Status @default(Due)
   last_date              DateTime?
-  maintenance_history    String[] // if subscription is active, this will be used to store the maintenance history of the item
-  shop_suggestions       String[] // if subscription is active, this will be used to suggest shops related to the item
+  maintenance_history    String[]
+  shop_suggestions       Json?
 
+  @@unique([item_id, upcoming_task])
+  @@index([item_id])
+  @@index([user_id])
   @@map("tasks")
 }
 
@@ -299,4 +305,14 @@ model General_Settings {
   contact_email String?
   contact_phone String?
   timezone      String?
+}
+
+model Questions {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  question   String[]
+  itemId     String   @unique
+  item       Item     @relation(fields: [itemId], references: [id])
+
+  @@map("questions ")
 }

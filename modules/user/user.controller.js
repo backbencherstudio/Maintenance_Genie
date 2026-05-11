@@ -1,9 +1,7 @@
 import dotenv from 'dotenv';
 import validator from 'validator';
 import bcrypt from 'bcryptjs';
-import { upload } from '../../config/Multer.config.js';
 import jwt from 'jsonwebtoken';
-import multer from 'multer';
 import { PrismaClient } from '@prisma/client';
 import {
   generateOTP,
@@ -11,17 +9,27 @@ import {
   sendForgotPasswordOTP,
   sendRegistrationOTPEmail,
 } from '../../utils/mailService.js';
-import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import pkg from 'jsonwebtoken';
-import cookieParser from 'cookie-parser';
-import { token } from 'morgan';
-import { type } from 'os';
+
+import Stripe from 'stripe';
+import {
+  change_password,
+  forgot_password_otp_send,
+  login,
+  register_step_1_email,
+  register_step_3,
+  reset_password,
+  update_user_details,
+  verify_otp,
+} from '../../validations/joi.validations.js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+});
 
 const prisma = new PrismaClient();
-const { sign, verify } = pkg;
 dotenv.config();
 const { isEmail } = validator;
 const __filename = fileURLToPath(import.meta.url);
@@ -35,7 +43,11 @@ const hashPassword = async (password) => {
 // Register a new user
 export const registerUserStep1 = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { value, error } = register_step_1_email.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { email } = value;
 
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
@@ -96,7 +108,13 @@ export const registerUserStep1 = async (req, res) => {
 };
 export const verifyOTP = async (req, res) => {
   try {
-    const { otp, email } = req.body;
+    const { value, error } = verify_otp.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { otp, email } = value;
 
     if (!otp || !email) {
       return res.status(400).json({ message: 'OTP and email are required' });
@@ -159,7 +177,7 @@ export const verifyOTP = async (req, res) => {
 };
 export const registerUserStep3 = async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { name, password } = register_step_3.validate(req.body);
     const token = req.headers['authorization']?.split(' ')[1];
 
     if (!token) {
@@ -199,12 +217,28 @@ export const registerUserStep3 = async (req, res) => {
       return res.status(400).json({ message: 'Email is not registered' });
     }
 
+    let stripeCustomer;
+    if (!existingUser.billing_id) {
+      stripeCustomer = await stripe.customers.create({
+        email,
+        name,
+        metadata: { app_user_id: existingUser.id },
+      });
+
+      console.log('Stripe customer created:', stripeCustomer.id);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { email },
       data: {
         name,
-        email,
         password: hashedPassword,
+        billing_id: stripeCustomer
+          ? stripeCustomer.id
+          : existingUser.billing_id,
+        customer_id: stripeCustomer
+          ? stripeCustomer.id
+          : existingUser.customer_id,
       },
     });
 
@@ -224,7 +258,12 @@ export const registerUserStep3 = async (req, res) => {
 //Login
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { error, value } = login.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const { email, password } = value;
 
     const missingField = ['email', 'password'].find(
       (field) => !req.body[field],
@@ -238,26 +277,18 @@ export const loginUser = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: {
         email,
-        type: 'USER',
-        status: 'active',
       },
     });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not exists, please register and then try to log in',
+      });
+    }
 
     if (user.status === 'suspended') {
       return res.status(403).json({
         message: 'Your account is suspended. Please contact support.',
-      });
-    }
-
-    if (!user) {
-      return res.status(404).json({
-        message: 'User not found',
-      });
-    }
-
-    if (user.type == 'ADMIN') {
-      return res.status(403).json({
-        message: 'ADMIN YOU MUST LOG IN FROM ADMIN PANEL',
       });
     }
 
@@ -281,7 +312,8 @@ export const loginUser = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.created_at,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
       token,
     });
@@ -296,7 +328,7 @@ export const loginUser = async (req, res) => {
 // Forgot password OTP send
 export const forgotPasswordOTPsend = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = forgot_password_otp_send(req.body);
 
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
@@ -315,22 +347,29 @@ export const forgotPasswordOTPsend = async (req, res) => {
     });
 
     if (existingTempUser) {
-      await prisma.temp.delete({ where: { email } });
+      if (new Date() > new Date(existingTempUser.expires_at)) {
+        await prisma.temp.delete({ where: { email } });
 
-      const otp = generateOTP();
-      await prisma.temp.create({
-        data: {
-          email,
-          otp,
-          expires_at: new Date(Date.now() + 15 * 60 * 1000),
-        },
-      });
+        const otp = generateOTP();
+        await prisma.temp.create({
+          data: {
+            email,
+            otp,
+            expires_at: new Date(Date.now() + 15 * 60 * 1000),
+          },
+        });
 
-      sendForgotPasswordOTP(email, otp);
+        sendForgotPasswordOTP(email, otp);
 
-      return res.status(200).json({
+        return res.status(200).json({
+          message: 'OTP expired. A new OTP has been sent to your email.',
+        });
+      }
+
+      return res.status(400).json({
         message:
-          'New OTP has been sent to your email. Please verify it to continue.',
+          'An OTP has already been sent to this email. Please check your inbox or wait for expiration.',
+        shouldResendOtp: false,
       });
     }
 
@@ -358,7 +397,7 @@ export const forgotPasswordOTPsend = async (req, res) => {
 // Match forgot password OTP
 export const verifyForgotPasswordOTP = async (req, res) => {
   try {
-    const { otp, email } = req.body;
+    const { otp, email } = verify_otp(req.body);
 
     if (!otp || !email) {
       return res.status(400).json({ message: 'OTP and email are required' });
@@ -366,6 +405,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     const existingTempUser = await prisma.temp.findUnique({
       where: { email },
+      select: { otp: true, email: true },
     });
 
     if (!existingTempUser) {
@@ -377,7 +417,7 @@ export const verifyForgotPasswordOTP = async (req, res) => {
         success: false,
         message: 'OTP expired. Please request a new OTP.',
         shouldResendOtp: true,
-        ucodeId: existingTempUser.id,
+        email: existingTempUser.email,
       });
     }
 
@@ -390,15 +430,14 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 
     const jwtToken = jwt.sign(
       {
-        userId: existingTempUser.id,
         email: existingTempUser.email,
       },
-      process.env.JWT_SECRET,
-      { expiresIn: '10d' },
+      process.env.JWT_SECRET_FORGET,
+      { expiresIn: '1d' },
     );
 
     await prisma.temp.delete({
-      where: { id: existingTempUser.id },
+      where: { email: existingTempUser.email },
     });
 
     return res.status(200).json({
@@ -413,60 +452,48 @@ export const verifyForgotPasswordOTP = async (req, res) => {
 };
 // Reset password
 export const resetPassword = async (req, res) => {
-  try {
-    const { newPassword } = req.body;
+  const { value, error } = reset_password.validate(req.body);
+  const { newPassword } = value;
 
-    if (!newPassword || newPassword.length < 8) {
-      return res
-        .status(400)
-        .json({ message: 'Password must be at least 8 characters long' });
-    }
+  const token = req.headers.authorization?.split(' ')[1];
 
-    const token = req.headers['authorization']?.split(' ')[1];
-
-    if (!token) {
-      return res
-        .status(400)
-        .json({ message: 'Authorization token is required' });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-      return res.status(401).json({ message: 'Invalid or expired token' });
-    }
-
-    const { email } = decoded;
-
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    const updatedUser = await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Password reset successfully',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-      },
-    });
-  } catch (error) {
-    console.error('Error in resetPassword:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+  if (!token) {
+    return res.status(400).json({ message: 'Authorization token is required' });
   }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET_FORGET);
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
+
+  const { email } = decoded;
+
+  console.log(email);
+
+  const user = await prisma.user.findUnique({
+    where: { email: email },
+  });
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+  const isOldPasswordCorrect = await bcrypt.compare(newPassword, user.password);
+  if (isOldPasswordCorrect) {
+    return res
+      .status(400)
+      .json({ message: 'New password cannot be the same as the old password' });
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { email: email },
+    data: { password: hashedPassword },
+  });
+
+  return res.status(200).json({ message: 'Password reset successfully' });
 };
 // Check if user is authenticated
 export const authenticateUser = (req, res, next) => {
@@ -479,13 +506,13 @@ export const authenticateUser = (req, res, next) => {
     if (err) {
       return res.status(403).json({ message: 'Invalid token' });
     }
-    req.user = decoded; // Add user data to req.user
+    req.user = decoded;
     next();
   });
 };
 //update user image
 export const updateImage = async (req, res) => {
-  console.log('Image upload: ', req.file);
+  // console.log("Image upload: ", req.file);
 
   try {
     const id = req.user?.userId;
@@ -496,7 +523,7 @@ export const updateImage = async (req, res) => {
     }
 
     const existingUser = await prisma.user.findUnique({
-      where: { id: id },
+      where: { id: id, type: 'USER' },
     });
 
     if (!existingUser) {
@@ -546,9 +573,20 @@ export const updateImage = async (req, res) => {
 //update user details
 export const updateUserDetails = async (req, res) => {
   try {
-    const { name, email, address } = req.body;
-    const id = req.user?.userId;
+    const { value, error } = update_user_details.validate(req.body);
+    const { name, email, address } = value;
 
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const id = req.user?.userId;
+    const existUser = await prisma.user.findUnique({
+      where: { id: id, type: 'USER' },
+    });
+    if (!existUser) {
+      return res.status(400).json({ message: 'User not exist' });
+    }
     if (!id) {
       return res.status(400).json({ message: 'User not authenticated' });
     }
@@ -563,6 +601,16 @@ export const updateUserDetails = async (req, res) => {
       return res
         .status(400)
         .json({ message: 'No valid fields provided for update' });
+    }
+
+    if (email) {
+      const checkExistingEmail = await prisma.user.findUnique({
+        where: { email: email },
+      });
+
+      if (checkExistingEmail) {
+        res.status(400).json({ message: 'Email already exists' });
+      }
     }
 
     const user = await prisma.user.update({
@@ -582,61 +630,6 @@ export const updateUserDetails = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    return res
-      .status(500)
-      .json({ message: 'Internal Server Error', error: error.message });
-  }
-};
-//change password
-export const changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      return res.status(400).json({ message: 'User not authenticated' });
-    }
-
-    if (!currentPassword || !newPassword) {
-      return res
-        .status(400)
-        .json({ message: 'Current and new passwords are required' });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId, type: 'USER' },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const isCurrentPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
-    if (!isCurrentPasswordValid) {
-      return res.status(401).json({ message: 'Current password is incorrect' });
-    }
-
-    const hashedNewPassword = await hashPassword(newPassword);
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword },
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Password changed successfully',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-      },
-    });
-  } catch (error) {
-    console.error('Error changing password:', error);
     return res
       .status(500)
       .json({ message: 'Internal Server Error', error: error.message });
@@ -707,7 +700,7 @@ export const getMe = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: userId, type: 'USER' },
       select: {
         id: true,
         name: true,
@@ -715,6 +708,11 @@ export const getMe = async (req, res) => {
         avatar: true,
         created_at: true,
         updated_at: true,
+        address: true,
+        role: true,
+        type: true,
+        status: true,
+        billing_id: true,
       },
     });
 
@@ -723,24 +721,74 @@ export const getMe = async (req, res) => {
     }
 
     const imageUrl = user.avatar
-      ? `${process.env.MEDIA_URL}/uploads/${user.avatar}`
+      ? `http://localhost:8070/uploads/${user.avatar}`
       : null;
 
     return res.status(200).json({
       success: true,
       message: 'User details retrieved successfully',
-      data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        imageUrl,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
-      },
+      data: { ...user, imageUrl },
     });
   } catch (error) {
     console.error('Error retrieving user details:', error);
+    return res
+      .status(500)
+      .json({ message: 'Internal Server Error', error: error.message });
+  }
+};
+// Update password
+export const updatePassword = async (req, res) => {
+  try {
+    const { value, error } = change_password.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    const { oldPassword, newPassword } = value;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User not authenticated' });
+    }
+    if (!oldPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: 'Current and new passwords are required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId, type: 'USER' },
+    });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      return res.status(401).json({ message: 'Old password is incorrect' });
+    }
+    const hashedNewPassword = await hashPassword(newPassword);
+
+    if (isOldPasswordValid === newPassword) {
+      return res
+        .status(401)
+        .json({ message: 'old and new password cannot be same' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating password:', error);
     return res
       .status(500)
       .json({ message: 'Internal Server Error', error: error.message });
