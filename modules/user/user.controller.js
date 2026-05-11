@@ -549,7 +549,7 @@ export const updateImage = async (req, res) => {
       },
     });
 
-    const imageUrl = `http://localhost:8080/uploads/${newImage.filename}`;
+    const imageUrl = `${process.env.MEDIA_URL}/uploads/${newImage.filename}`;
 
     return res.status(200).json({
       success: true,
@@ -721,7 +721,7 @@ export const getMe = async (req, res) => {
     }
 
     const imageUrl = user.avatar
-      ? `http://localhost:8070/uploads/${user.avatar}`
+      ? `${process.env.MEDIA_URL}/uploads/${user.avatar}`
       : null;
 
     return res.status(200).json({

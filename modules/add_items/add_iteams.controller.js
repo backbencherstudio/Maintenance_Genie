@@ -1,14 +1,14 @@
-import dotenv from "dotenv";
-import validator from "validator";
-import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import pkg from "jsonwebtoken";
-import axios from "axios";
-import sharp from "sharp";
-import Tesseract from "tesseract.js";
-import { itemSchema } from "../../validations/joi.validations.js";
+import dotenv from 'dotenv';
+import validator from 'validator';
+import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pkg from 'jsonwebtoken';
+import axios from 'axios';
+import sharp from 'sharp';
+import Tesseract from 'tesseract.js';
+import { itemSchema } from '../../validations/joi.validations.js';
 dotenv.config();
 
 const prisma = new PrismaClient();
@@ -45,41 +45,53 @@ const generateItemData = async (item) => {
     `;
 
     const serviceIntervalResponse = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+      'https://api.openai.com/v1/chat/completions',
       {
-        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo",
-        messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: serviceIntervalPrompt }],
+        model: process.env.CHAT_GPT_MODEL_NAME || 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: serviceIntervalPrompt },
+        ],
         max_tokens: 250,
         temperature: 0.7,
       },
       {
         headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
-      }
+      },
     );
 
     const forumSuggestionResponse = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+      'https://api.openai.com/v1/chat/completions',
       {
-        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo",
-        messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: forumSuggestionPrompt }],
+        model: process.env.CHAT_GPT_MODEL_NAME || 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: forumSuggestionPrompt },
+        ],
         max_tokens: 250,
       },
       {
         headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
-      }
+      },
     );
 
     let forumSuggestions = [];
-    if (forumSuggestionResponse.data && forumSuggestionResponse.data.choices && forumSuggestionResponse.data.choices[0].message) {
-      forumSuggestions = forumSuggestionResponse.data.choices[0].message.content.split("\n");
+    if (
+      forumSuggestionResponse.data &&
+      forumSuggestionResponse.data.choices &&
+      forumSuggestionResponse.data.choices[0].message
+    ) {
+      forumSuggestions =
+        forumSuggestionResponse.data.choices[0].message.content.split('\n');
     }
 
     return {
-      service_intervals: serviceIntervalResponse.data.choices[0].message.content.split("\n"),
+      service_intervals:
+        serviceIntervalResponse.data.choices[0].message.content.split('\n'),
       forum_suggestions: forumSuggestions,
     };
   } catch (error) {
-    console.error("Error generating item data with openAi:", error);
+    console.error('Error generating item data with openAi:', error);
     return null;
   }
 };
@@ -91,7 +103,6 @@ export const addItem = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-
     const {
       name,
       category,
@@ -100,16 +111,17 @@ export const addItem = async (req, res) => {
       year_of_the_model,
       purchase_date,
       total_mileage,
-
     } = value;
 
-    const formattedPurchaseDate = purchase_date ? new Date(purchase_date) : null;
+    const formattedPurchaseDate = purchase_date
+      ? new Date(purchase_date)
+      : null;
     // const formattedLastServiceDate = last_service_date ? new Date(last_service_date) : null;
     const mileage = total_mileage ? parseFloat(total_mileage) : null;
 
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
 
     const user = await prisma.user.findUnique({
@@ -118,7 +130,7 @@ export const addItem = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const { is_subscribed, role } = user;
@@ -155,19 +167,23 @@ export const addItem = async (req, res) => {
       `;
 
       const serviceIntervalResponse = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
+        'https://api.openai.com/v1/chat/completions',
         {
-          model: process.env.CHAT_GPT_MODEL_NAME || "gpt-3.5-turbo",
-          messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: serviceIntervalPrompt }],
+          model: process.env.CHAT_GPT_MODEL_NAME || 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant.' },
+            { role: 'user', content: serviceIntervalPrompt },
+          ],
           max_tokens: 200,
         },
         {
           headers: { Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}` },
-        }
+        },
       );
 
       generatedData = {
-        service_intervals: serviceIntervalResponse.data.choices[0].message.content.split("\n"),
+        service_intervals:
+          serviceIntervalResponse.data.choices[0].message.content.split('\n'),
       };
     }
 
@@ -180,25 +196,31 @@ export const addItem = async (req, res) => {
         },
       });
 
-      const imageUrl = req.file ? `http://localhost:8070/uploads/${req.file.filename}` : null;
+      const imageUrl = req.file
+        ? `http://localhost:8070/uploads/${req.file.filename}`
+        : null;
 
       return res.status(201).json({
         success: true,
-        message: "Item added successfully with generated data",
+        message: 'Item added successfully with generated data',
         item: updatedItem,
         imageUrl,
       });
     } else {
-      return res.status(500).json({ message: "Failed to generate additional data for item" });
+      return res
+        .status(500)
+        .json({ message: 'Failed to generate additional data for item' });
     }
   } catch (error) {
-    console.error("Error adding item:", error);
+    console.error('Error adding item:', error);
 
     if (req.file) {
-      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
+      fs.unlinkSync(path.join(__dirname, '../../uploads', req.file.filename));
     }
 
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 export const generateQuestions = async (req, res) => {
@@ -216,7 +238,7 @@ export const generateQuestions = async (req, res) => {
       },
     });
 
-    if (!item) return res.status(404).json({ message: "Item not found" });
+    if (!item) return res.status(404).json({ message: 'Item not found' });
 
     const questionss = await prisma.questions.findUnique({
       where: { itemId: id },
@@ -232,7 +254,7 @@ export const generateQuestions = async (req, res) => {
         - Brand: ${item.brand}
         - Model: ${item.model}
         - Purchase Date: ${item.purchase_date}
-        - Year of making this model: ${item.year_of_the_model || "Not available"}
+        - Year of making this model: ${item.year_of_the_model || 'Not available'}
         Please respond in JSON array format: ["Question 1?", "Question 2?", ...]
         Make valid questions related to the ${item.category} ${item.brand} ${item.model} (${item.year_of_the_model}).
         For example, a car made in 2015 will have different issues than a car made in 2020.
@@ -241,30 +263,35 @@ export const generateQuestions = async (req, res) => {
       `;
 
       const response = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
+        'https://api.openai.com/v1/chat/completions',
         {
-          model: process.env.CHAT_GPT_MODEL_NAME || "gpt-4",
-          messages: [{ role: "user", content: prompt }],
+          model: process.env.CHAT_GPT_MODEL_NAME || 'gpt-4',
+          messages: [{ role: 'user', content: prompt }],
         },
         {
           headers: {
             Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}`,
           },
-        }
+        },
       );
 
       let raw = response.data.choices[0].message.content.trim();
 
-      if (raw.startsWith("```")) {
-        raw = raw.replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
+      if (raw.startsWith('```')) {
+        raw = raw
+          .replace(/^```(?:json)?/, '')
+          .replace(/```$/, '')
+          .trim();
       }
 
       let questions;
       try {
         questions = JSON.parse(raw);
       } catch (err) {
-        console.error("Failed to parse questions JSON from GPT:", raw);
-        return res.status(500).json({ message: "Invalid JSON response from AI" });
+        console.error('Failed to parse questions JSON from GPT:', raw);
+        return res
+          .status(500)
+          .json({ message: 'Invalid JSON response from AI' });
       }
 
       let savedQuestions;
@@ -285,8 +312,8 @@ export const generateQuestions = async (req, res) => {
       return res.json({ success: true, questions: savedQuestions.question });
     }
   } catch (error) {
-    console.error("Error generating questions:", error);
-    return res.status(500).json({ message: "Failed to generate questions" });
+    console.error('Error generating questions:', error);
+    return res.status(500).json({ message: 'Failed to generate questions' });
   }
 };
 export const generateTasks = async (req, res) => {
@@ -295,11 +322,11 @@ export const generateTasks = async (req, res) => {
     const { answers } = req.body;
 
     if (!req.user?.userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
 
     if (!answers || !Array.isArray(answers) || answers.length === 0) {
-      return res.status(400).json({ message: "Answers are required" });
+      return res.status(400).json({ message: 'Answers are required' });
     }
 
     // if taskes already exist for this item, return those tasks
@@ -311,7 +338,7 @@ export const generateTasks = async (req, res) => {
     }
 
     const item = await prisma.item.findUnique({ where: { id: taskId } });
-    if (!item) return res.status(404).json({ message: "Item not found" });
+    if (!item) return res.status(404).json({ message: 'Item not found' });
 
     const questionRecord = await prisma.questions.findUnique({
       where: { itemId: taskId },
@@ -319,7 +346,9 @@ export const generateTasks = async (req, res) => {
     });
 
     if (!questionRecord?.question) {
-      return res.status(404).json({ message: "Question not found for this Task ID" });
+      return res
+        .status(404)
+        .json({ message: 'Question not found for this Task ID' });
     }
 
     const questions = Array.isArray(questionRecord.question)
@@ -328,7 +357,7 @@ export const generateTasks = async (req, res) => {
 
     if (answers.length !== questions.length) {
       return res.status(400).json({
-        message: "Number of answers must match number of questions",
+        message: 'Number of answers must match number of questions',
       });
     }
 
@@ -337,17 +366,16 @@ export const generateTasks = async (req, res) => {
       select: { is_subscribed: true, role: true },
     });
 
-    if (!user || (!user.is_subscribed && user.role !== "premium")) {
+    if (!user || (!user.is_subscribed && user.role !== 'premium')) {
       return res.json({
         success: false,
-        message: "Oops, need subscription to create tasks",
+        message: 'Oops, need subscription to create tasks',
       });
     }
 
-
-    const hasNo = answers.some((ans) => ans.toUpperCase() === "NO");
+    const hasNo = answers.some((ans) => ans.toUpperCase() === 'NO');
     if (!hasNo) {
-      return res.json({ success: true, message: "No tasks needed" });
+      return res.json({ success: true, message: 'No tasks needed' });
     }
 
     const pairedQA = questions.map((q, i) => ({
@@ -359,7 +387,7 @@ export const generateTasks = async (req, res) => {
 You are a maintenance diagnostic assistant.
 Below are diagnostic questions with the user's YES/NO answers:
 
-${pairedQA.map((q, i) => `${i + 1}. ${q.question} → ${q.answer}`).join("\n")}
+${pairedQA.map((q, i) => `${i + 1}. ${q.question} → ${q.answer}`).join('\n')}
 
 For each "NO" answer, generate one maintenance task with:
 - task_name
@@ -389,34 +417,37 @@ If all answers are "YES", respond with an empty array [].
 `;
 
     const aiResponse = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+      'https://api.openai.com/v1/chat/completions',
       {
-        model: process.env.CHAT_GPT_MODEL_NAME || "gpt-4-turbo",
-        messages: [{ role: "user", content: prompt }],
+        model: process.env.CHAT_GPT_MODEL_NAME || 'gpt-4-turbo',
+        messages: [{ role: 'user', content: prompt }],
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}`,
         },
-      }
+      },
     );
 
     let raw = aiResponse.data.choices[0].message.content.trim();
 
     // Remove code fences or extra characters
-    raw = raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    raw = raw
+      .replace(/^```(?:json)?/i, '')
+      .replace(/```$/, '')
+      .trim();
 
     let tasks;
     try {
       tasks = JSON.parse(raw);
     } catch (err) {
-      console.error("❌ Failed to parse GPT JSON:", raw);
-      return res.status(500).json({ message: "Invalid JSON from AI" });
+      console.error('❌ Failed to parse GPT JSON:', raw);
+      return res.status(500).json({ message: 'Invalid JSON from AI' });
     }
 
     // If GPT returns no tasks
     if (!Array.isArray(tasks) || tasks.length === 0) {
-      return res.json({ success: true, message: "No tasks needed" });
+      return res.json({ success: true, message: 'No tasks needed' });
     }
 
     // ✅ Store tasks in DB
@@ -432,16 +463,15 @@ If all answers are "YES", respond with an empty array [].
             user: { connect: { id: item.user_id } },
             shop_suggestions: t.shop_suggestions || [],
           },
-        })
-      )
+        }),
+      ),
     );
 
     console.log(`✅ Created ${createdTasks.length} tasks`);
     return res.json({ success: true, tasks: createdTasks });
-
   } catch (error) {
-    console.error("🔥 Error generating tasks:", error);
-    return res.status(500).json({ message: "Failed to generate tasks" });
+    console.error('🔥 Error generating tasks:', error);
+    return res.status(500).json({ message: 'Failed to generate tasks' });
   }
 };
 export const uploadReceipt = async (req, res) => {
@@ -449,24 +479,24 @@ export const uploadReceipt = async (req, res) => {
     const { id } = req.params;
 
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return res.status(400).json({ message: 'No file uploaded' });
     }
 
     const task = await prisma.tasks.findUnique({ where: { id } });
 
     if (!task) {
-      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
-      return res.status(404).json({ message: "Task not found" });
+      fs.unlinkSync(path.join(__dirname, '../../uploads', req.file.filename));
+      return res.status(404).json({ message: 'Task not found' });
     }
 
-    const localPath = path.join(__dirname, "../../uploads", req.file.filename);
+    const localPath = path.join(__dirname, '../../uploads', req.file.filename);
     const resizedImageBuffer = await sharp(localPath)
       .resize({ width: 1000 })
       .toBuffer();
 
-    const base64Image = `data:image/png;base64,${resizedImageBuffer.toString("base64")}`;
+    const base64Image = `data:image/png;base64,${resizedImageBuffer.toString('base64')}`;
 
-    const ocrResult = await Tesseract.recognize(resizedImageBuffer, "eng");
+    const ocrResult = await Tesseract.recognize(resizedImageBuffer, 'eng');
     const extractedText = ocrResult.data.text.trim();
 
     // console.log("OCR Extracted Text:", extractedText.slice(0, 500));
@@ -493,16 +523,16 @@ If you can't find any services, respond with: { "maintenance_history": [] }
 `;
 
     const gptResponse = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+      'https://api.openai.com/v1/chat/completions',
       {
-        model: "gpt-4o",
+        model: 'gpt-4o',
         messages: [
           {
-            role: "user",
+            role: 'user',
             content: [
-              { type: "text", text: prompt },
+              { type: 'text', text: prompt },
               {
-                type: "image_url",
+                type: 'image_url',
                 image_url: {
                   url: base64Image,
                 },
@@ -515,24 +545,28 @@ If you can't find any services, respond with: { "maintenance_history": [] }
       {
         headers: {
           Authorization: `Bearer ${process.env.CHAT_GPT_API_KEY}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
     let raw = gptResponse.data.choices[0].message.content.trim();
 
-    if (raw.startsWith("```")) {
-      raw = raw.replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
+    if (raw.startsWith('```')) {
+      raw = raw
+        .replace(/^```(?:json)?/, '')
+        .replace(/```$/, '')
+        .trim();
     }
 
     let parsed;
     try {
       parsed = JSON.parse(raw);
     } catch (err) {
-      console.error("JSON parse failed:", raw);
+      console.error('JSON parse failed:', raw);
       return res.status(422).json({
-        message: "Invalid JSON returned from GPT. Please reupload a clearer image.",
+        message:
+          'Invalid JSON returned from GPT. Please reupload a clearer image.',
       });
     }
 
@@ -540,7 +574,7 @@ If you can't find any services, respond with: { "maintenance_history": [] }
 
     if (!history.length) {
       return res.status(400).json({
-        message: "Could not extract readable data. Please try another receipt.",
+        message: 'Could not extract readable data. Please try another receipt.',
       });
     }
 
@@ -555,59 +589,58 @@ If you can't find any services, respond with: { "maintenance_history": [] }
 
     return res.json({
       success: true,
-      message: "Receipt uploaded and maintenance history updated.",
+      message: 'Receipt uploaded and maintenance history updated.',
       task: updatedTask,
       receiptUrl: `http://localhost:8070/uploads/${req.file.filename}`,
     });
-
   } catch (error) {
-    console.error("Error in uploadReceipt:", error);
+    console.error('Error in uploadReceipt:', error);
 
     if (req.file) {
-      fs.unlinkSync(path.join(__dirname, "../../uploads", req.file.filename));
+      fs.unlinkSync(path.join(__dirname, '../../uploads', req.file.filename));
     }
 
     return res.status(500).json({
-      message: "Internal server error",
+      message: 'Internal server error',
       error: error.message,
     });
   }
 };
 
-//need to work in here 
+//need to work in here
 export const updateStatusOfTask = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("id", id);
+    console.log('id', id);
     const userId = req.user?.userId;
-    console.log("userId", userId);
+    console.log('userId', userId);
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
-
 
     const task = await prisma.tasks.findUnique({
       where: { id: id },
-      select: { id: true, status: true , user_id: true},
+      select: { id: true, status: true, user_id: true },
     });
 
     console.log(task.user_id);
-    
 
-        // user is owner of the task
-    if(userId !== task.user_id){
-     return res.status(403).json({ message: "You are not authorized to update this task" });
-    };
+    // user is owner of the task
+    if (userId !== task.user_id) {
+      return res
+        .status(403)
+        .json({ message: 'You are not authorized to update this task' });
+    }
 
     if (!id) {
-      return res.status(400).json({ message: "Task ID is required" });
+      return res.status(400).json({ message: 'Task ID is required' });
     }
 
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: 'Task not found' });
     }
 
-    const newStatus = task.status === "Due" ? "Completed" : "Due";
+    const newStatus = task.status === 'Due' ? 'Completed' : 'Due';
 
     const updatedTask = await prisma.tasks.update({
       where: { id: id },
@@ -615,44 +648,46 @@ export const updateStatusOfTask = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Task status updated successfully",
+      message: 'Task status updated successfully',
       task: updatedTask,
     });
   } catch (error) {
     console.error('Error updating task status:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 // get all completed task for an user
 export const getAllcomletedTasksForUser = async (req, res) => {
- try {
-  
-   const userId = req.user?.userId;
-   if (!userId) {
-     return res.status(400).json({ message: "User ID is required" });
-   }
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
     const tasks = await prisma.tasks.findMany({
-      where: { user_id: userId, status: "Completed" },
+      where: { user_id: userId, status: 'Completed' },
       orderBy: { created_at: 'desc' },
     });
 
     return res.status(200).json({
       success: true,
-      message: "Completed Tasks retrieved successfully",
+      message: 'Completed Tasks retrieved successfully',
       tasks,
     });
-
- } catch (error) {
-  console.error('Error retrieving completed tasks:', error);
-  return res.status(500).json({ message: "Internal server error", error: error.message })
- }  
-}
+  } catch (error) {
+    console.error('Error retrieving completed tasks:', error);
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
+  }
+};
 
 export const getAllItems = async (req, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
 
     const items = await prisma.item.findMany({
@@ -667,17 +702,19 @@ export const getAllItems = async (req, res) => {
     });
 
     if (items.length === 0) {
-      return res.status(404).json({ message: "No items found for this user" });
+      return res.status(404).json({ message: 'No items found for this user' });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Items retrieved successfully",
+      message: 'Items retrieved successfully',
       items,
     });
   } catch (error) {
     console.error('Error retrieving items:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 export const getItemById = async (req, res) => {
@@ -685,7 +722,7 @@ export const getItemById = async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
-      return res.status(400).json({ message: "Item ID is required" });
+      return res.status(400).json({ message: 'Item ID is required' });
     }
 
     const item = await prisma.item.findUnique({
@@ -701,30 +738,34 @@ export const getItemById = async (req, res) => {
     });
 
     if (!item) {
-      return res.status(404).json({ message: "Item not found" });
+      return res.status(404).json({ message: 'Item not found' });
     }
 
     // Append full image URL if it exists
     const formattedItem = {
       ...item,
-      image_url: item.image_url ? `http://localhost:8070/uploads/${item.image_url}` : null,
+      image_url: item.image_url
+        ? `${process.env.MEDIA_URL}/uploads/${item.image_url}`
+        : null,
     };
 
     return res.status(200).json({
       success: true,
-      message: "Item retrieved successfully",
+      message: 'Item retrieved successfully',
       item: formattedItem,
     });
   } catch (error) {
     console.error('Error retrieving item:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 export const getAllTasksForAnItem = async (req, res) => {
   try {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ message: "Item ID is required" });
+      return res.status(400).json({ message: 'Item ID is required' });
     }
     const tasks = await prisma.tasks.findMany({
       where: { item_id: id },
@@ -733,19 +774,21 @@ export const getAllTasksForAnItem = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Tasks retrieved successfully",
+      message: 'Tasks retrieved successfully',
       tasks,
     });
   } catch (error) {
     console.error('Error retrieving tasks:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 export const getAlltasksForAuser = async (req, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
     const tasks = await prisma.tasks.findMany({
       where: { user_id: userId },
@@ -753,13 +796,14 @@ export const getAlltasksForAuser = async (req, res) => {
     });
     return res.status(200).json({
       success: true,
-      message: "Tasks retrieved successfully",
+      message: 'Tasks retrieved successfully',
       tasks,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error retrieving tasks:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 //delete a task for an user
@@ -767,25 +811,30 @@ export const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ message: "Task ID is required" });
+      return res.status(400).json({ message: 'Task ID is required' });
     }
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
     const task = await prisma.tasks.findUnique({ where: { id } });
     if (!task) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: 'Task not found' });
     }
     if (task.user_id !== userId) {
-      return res.status(403).json({ message: "You are not authorized to delete this task" });
+      return res
+        .status(403)
+        .json({ message: 'You are not authorized to delete this task' });
     }
     await prisma.tasks.delete({ where: { id } });
-    return res.status(200).json({ success: true, message: "Task deleted successfully" });
-  }
-  catch (error) {
+    return res
+      .status(200)
+      .json({ success: true, message: 'Task deleted successfully' });
+  } catch (error) {
     console.error('Error deleting task:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
 //delete an item for an user
@@ -793,21 +842,23 @@ export const deleteItem = async (req, res) => {
   try {
     const { id } = req.params;
     if (!id) {
-      return res.status(400).json({ message: "Item ID is required" });
+      return res.status(400).json({ message: 'Item ID is required' });
     }
 
     const userId = req.user?.userId;
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ message: 'User ID is required' });
     }
 
     const item = await prisma.item.findUnique({ where: { id } });
     if (!item) {
-      return res.status(404).json({ message: "Item not found" });
+      return res.status(404).json({ message: 'Item not found' });
     }
 
     if (item.user_id !== userId) {
-      return res.status(403).json({ message: "You are not authorized to delete this item" });
+      return res
+        .status(403)
+        .json({ message: 'You are not authorized to delete this item' });
     }
 
     // Delete related data first
@@ -817,10 +868,13 @@ export const deleteItem = async (req, res) => {
     // Now delete the item
     await prisma.item.delete({ where: { id } });
 
-    return res.status(200).json({ success: true, message: "Item deleted successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: 'Item deleted successfully' });
   } catch (error) {
     console.error('Error deleting item:', error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message });
   }
 };
-
