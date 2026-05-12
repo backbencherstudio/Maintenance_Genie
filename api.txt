@@ -1,0 +1,13 @@
+For food images, we will use Spoonacular
+D
+Me
+May 05, 11:34 PM
+Here is the API Key for Spoonacular: 3bebcfdcf4a84d3b8984a0dd1885163d
+D
+Me
+May 05, 11:34 PM
+Here is the spoonacular API documentation: https://spoonacular.com/food-api/docs
+D
+Me
+May 05, 11:36 PM
+Also - as a refresher, this is the food sources document that I sent in February, I believe

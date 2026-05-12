@@ -314,5 +314,5 @@ model Questions {
   itemId     String   @unique
   item       Item     @relation(fields: [itemId], references: [id])
 
-  @@map("questions ")
+  @@map("questions")
 }
